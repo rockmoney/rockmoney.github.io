@@ -9,23 +9,78 @@
   <style>
     body {
       margin: 0;
-      height: 100vh;
+      background: black;
+      color: #0052FF;
+      font-family: Arial, sans-serif;
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
-      background-color: black;
-      font-family: Arial, sans-serif;
+      height: 100vh;
+      overflow: hidden;
     }
 
     h1 {
-      color: #0052FF; /* Coinbase/Base blue */
-      font-size: 3rem;
+      margin-bottom: 10px;
       text-align: center;
+    }
+
+    p {
+      margin-top: 0;
+      color: white;
+    }
+
+    canvas {
+      border: 2px solid #0052FF;
+      background: black;
     }
   </style>
 </head>
 
 <body>
   <h1>Welcome to Rocky's Base Project</h1>
-</body>
-</html>
+  <p>Use W/S keys to play Pong</p>
+
+  <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const paddleWidth = 10;
+    const paddleHeight = 80;
+
+    let playerY = canvas.height / 2 - paddleHeight / 2;
+    let aiY = canvas.height / 2 - paddleHeight / 2;
+
+    let ballX = canvas.width / 2;
+    let ballY = canvas.height / 2;
+
+    let ballSpeedX = 5;
+    let ballSpeedY = 4;
+
+    const keys = {};
+
+    document.addEventListener("keydown", (e) => {
+      keys[e.key.toLowerCase()] = true;
+    });
+
+    document.addEventListener("keyup", (e) => {
+      keys[e.key.toLowerCase()] = false;
+    });
+
+    function drawRect(x, y, w, h, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, w, h);
+    }
+
+    function drawBall(x, y, r, color) {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function update() {
+      // Player movement
+      if (keys["w"] && playerY >
