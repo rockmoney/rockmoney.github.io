@@ -14,32 +14,38 @@
       font-family: Arial, sans-serif;
       display: flex;
       flex-direction: column;
-      justify-content: center;
       align-items: center;
-      height: 100vh;
+      justify-content: center;
+      min-height: 100vh;
       overflow: hidden;
     }
 
     h1 {
-      margin-bottom: 10px;
+      margin: 10px;
       text-align: center;
+      font-size: 2rem;
     }
 
     p {
-      margin-top: 0;
       color: white;
+      margin-bottom: 10px;
+      text-align: center;
     }
 
     canvas {
       border: 2px solid #0052FF;
       background: black;
+      width: 95vw;
+      max-width: 800px;
+      height: auto;
+      touch-action: none;
     }
   </style>
 </head>
 
 <body>
   <h1>Welcome to Rocky's Base Project</h1>
-  <p>Use W/S keys to play Pong</p>
+  <p>Desktop: W/S keys • Mobile: Drag finger up/down</p>
 
   <canvas id="gameCanvas" width="800" height="400"></canvas>
 
@@ -61,6 +67,7 @@
 
     const keys = {};
 
+    // Keyboard controls
     document.addEventListener("keydown", (e) => {
       keys[e.key.toLowerCase()] = true;
     });
@@ -68,6 +75,22 @@
     document.addEventListener("keyup", (e) => {
       keys[e.key.toLowerCase()] = false;
     });
+
+    // Mobile touch controls
+    canvas.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+
+      const rect = canvas.getBoundingClientRect();
+      const touchY = e.touches[0].clientY - rect.top;
+
+      playerY = touchY - paddleHeight / 2;
+
+      // Keep paddle in bounds
+      if (playerY < 0) playerY = 0;
+      if (playerY > canvas.height - paddleHeight) {
+        playerY = canvas.height - paddleHeight;
+      }
+    }, { passive: false });
 
     function drawRect(x, y, w, h, color) {
       ctx.fillStyle = color;
@@ -82,5 +105,90 @@
     }
 
     function update() {
-      // Player movement
-      if (keys["w"] && playerY >
+      // Desktop movement
+      if (keys["w"] && playerY > 0) {
+        playerY -= 6;
+      }
+
+      if (keys["s"] && playerY < canvas.height - paddleHeight) {
+        playerY += 6;
+      }
+
+      // AI movement
+      const aiCenter = aiY + paddleHeight / 2;
+
+      if (aiCenter < ballY - 20) {
+        aiY += 4;
+      } else if (aiCenter > ballY + 20) {
+        aiY -= 4;
+      }
+
+      // Ball movement
+      ballX += ballSpeedX;
+      ballY += ballSpeedY;
+
+      // Top/bottom bounce
+      if (ballY <= 0 || ballY >= canvas.height) {
+        ballSpeedY *= -1;
+      }
+
+      // Player paddle collision
+      if (
+        ballX <= 20 &&
+        ballY > playerY &&
+        ballY < playerY + paddleHeight
+      ) {
+        ballSpeedX *= -1;
+      }
+
+      // AI paddle collision
+      if (
+        ballX >= canvas.width - 20 &&
+        ballY > aiY &&
+        ballY < aiY + paddleHeight
+      ) {
+        ballSpeedX *= -1;
+      }
+
+      // Reset ball
+      if (ballX < 0 || ballX > canvas.width) {
+        ballX = canvas.width / 2;
+        ballY = canvas.height / 2;
+        ballSpeedX *= -1;
+      }
+    }
+
+    function draw() {
+      drawRect(0, 0, canvas.width, canvas.height, "black");
+
+      // Middle line
+      for (let i = 0; i < canvas.height; i += 20) {
+        drawRect(canvas.width / 2 - 1, i, 2, 10, "#333");
+      }
+
+      // Player paddle
+      drawRect(10, playerY, paddleWidth, paddleHeight, "#0052FF");
+
+      // AI paddle
+      drawRect(
+        canvas.width - 20,
+        aiY,
+        paddleWidth,
+        paddleHeight,
+        "#0052FF"
+      );
+
+      // Ball
+      drawBall(ballX, ballY, 8, "white");
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+  </script>
+</body>
+</html>
