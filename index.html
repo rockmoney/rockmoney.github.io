@@ -1,12 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="base:app_id" content="698d6ec5b3590846b38398f8" />
-  <title>Rocky's Base Project</title>
-
-  <style>
+  <title>Rocky's Base Project</title>  <style>
     body {
       margin: 0;
       background: black;
@@ -15,9 +12,8 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
       min-height: 100vh;
-      overflow: hidden;
+      overflow-x: hidden;
       padding-top: 20px;
     }
 
@@ -25,16 +21,13 @@
       margin: 0;
       text-align: center;
       font-size: 3.5rem;
-      position: absolute;
-      top: 20px;
       color: #0052FF;
     }
 
-    p {
+    .instructions {
       color: white;
-      margin-top: 100px;
-      margin-bottom: 10px;
       text-align: center;
+      margin: 15px 0;
     }
 
     canvas {
@@ -45,17 +38,67 @@
       height: auto;
       touch-action: none;
     }
-  </style>
-</head>
 
-<body>
-  <h1>Rocky's Base Project</h1>
+    #opinion-section {
+      color: #836EF9;
+      text-align: center;
+      max-width: 1000px;
+      margin: 60px auto 40px auto;
+      padding: 20px;
+      line-height: 1.7;
+    }
 
-  <p>Desktop: W/S keys • Mobile: Drag finger up/down</p>
+    #opinion-section h2 {
+      color: #836EF9;
+    }
+  </style></head><body>  <h1>Rocky's Base Project</h1>  <div class="instructions">
+    Desktop: W/S keys • Mobile: Drag finger up/down
+  </div><canvas id="gameCanvas" width="800" height="400"></canvas>
 
-  <canvas id="gameCanvas" width="800" height="400"></canvas>
+  <div id="opinion-section">
+    <h2>Monad Ecosystem — My Personal Opinion</h2><p>
+  The content below reflects my personal opinions, concerns, and experiences.
+  It is not presented as factual findings, and readers should conduct their
+  own independent research (DYOR) before making any financial,
+  cryptocurrency, or investment decisions.
+</p>
 
-  <script>
+<p>
+  I have significant concerns regarding the Monad ecosystem, certain
+  projects built around it, and the way some community and marketing
+  efforts have been conducted. Based on my observations, I believe hype
+  and promotion have often received more attention than transparency,
+  accountability, and rewarding long-term community participation.
+</p>
+
+<p>
+  One of my biggest concerns involves airdrop allocation decisions. In my
+  opinion, many early supporters spent substantial time testing products,
+  participating in campaigns, promoting projects, and contributing
+  feedback with the expectation that their efforts would be recognized.
+</p>
+
+<p>
+  I am also concerned about the long-term sustainability of projects that
+  rely heavily on promotional campaigns and speculative activity. In my
+  view, healthy ecosystems should prioritize transparency, user trust,
+  product utility, and fair treatment of participants.
+</p>
+
+<p>
+  Readers should independently evaluate every project, team, token,
+  exchange, wallet, NFT collection, and DeFi platform before
+  participating.
+</p>
+
+<p>
+  This page is intended to share my personal perspective and encourage
+  visitors to research all claims, review available evidence, and make
+  informed decisions based on multiple sources of information rather than
+  any single opinion.
+</p>
+
+  </div>  <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
@@ -73,7 +116,6 @@
 
     const keys = {};
 
-    // Keyboard controls
     document.addEventListener("keydown", (e) => {
       keys[e.key.toLowerCase()] = true;
     });
@@ -82,7 +124,6 @@
       keys[e.key.toLowerCase()] = false;
     });
 
-    // Mobile touch controls
     canvas.addEventListener("touchmove", (e) => {
       e.preventDefault();
 
@@ -91,8 +132,94 @@
 
       playerY = touchY - paddleHeight / 2;
 
-      // Keep paddle in bounds
       if (playerY < 0) playerY = 0;
+
+      if (playerY > canvas.height - paddleHeight) {
+        playerY = canvas.height - paddleHeight;
+      }
+    }, { passive: false });
+
+    function drawRect(x, y, w, h, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, w, h);
+    }
+
+    function drawBall(x, y, r, color) {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function update() {
+      if (keys["w"] && playerY > 0) playerY -= 6;
+      if (keys["s"] && playerY < canvas.height - paddleHeight) playerY += 6;
+
+      const aiCenter = aiY + paddleHeight / 2;
+
+      if (aiCenter < ballY - 20) aiY += 4;
+      else if (aiCenter > ballY + 20) aiY -= 4;
+
+      ballX += ballSpeedX;
+      ballY += ballSpeedY;
+
+      if (ballY <= 0 || ballY >= canvas.height) {
+        ballSpeedY *= -1;
+      }
+
+      if (
+        ballX <= 20 &&
+        ballY > playerY &&
+        ballY < playerY + paddleHeight
+      ) {
+        ballSpeedX *= -1;
+      }
+
+      if (
+        ballX >= canvas.width - 20 &&
+        ballY > aiY &&
+        ballY < aiY + paddleHeight
+      ) {
+        ballSpeedX *= -1;
+      }
+
+      if (ballX < 0 || ballX > canvas.width) {
+        ballX = canvas.width / 2;
+        ballY = canvas.height / 2;
+        ballSpeedX *= -1;
+      }
+    }
+
+    function draw() {
+      drawRect(0, 0, canvas.width, canvas.height, "black");
+
+      for (let i = 0; i < canvas.height; i += 20) {
+        drawRect(canvas.width / 2 - 1, i, 2, 10, "#333");
+      }
+
+      drawRect(10, playerY, paddleWidth, paddleHeight, "#0052FF");
+
+      drawRect(
+        canvas.width - 20,
+        aiY,
+        paddleWidth,
+        paddleHeight,
+        "#0052FF"
+      );
+
+      drawBall(ballX, ballY, 8, "white");
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+  </script></body>
+</html>
+:::      if (playerY < 0) playerY = 0;
 
       if (playerY > canvas.height - paddleHeight) {
         playerY = canvas.height - paddleHeight;
