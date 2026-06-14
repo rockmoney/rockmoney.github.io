@@ -1,82 +1,201 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="base:app_id" content="698d6ec5b3590846b38398f8" />
-<title>Rocky's Base Project</title>
-<style>
-body{margin:0;background:black;color:#0052FF;font-family:Arial,sans-serif;display:flex;flex-direction:column;align-items:center;min-height:100vh;overflow-x:hidden;padding-top:20px}
-h1{margin:0;text-align:center;font-size:3.5rem;color:#0052FF}
-.instructions{color:white;text-align:center;margin:15px 0}
-canvas{border:2px solid #0052FF;background:black;width:95vw;max-width:800px;height:auto;touch-action:none}
-#opinion-section{color:#836EF9;text-align:center;max-width:1000px;margin:60px auto 40px auto;padding:20px;line-height:1.7}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="base:app_id" content="698d6ec5b3590846b38398f8" />
+  <title>Rocky's Base Project</title>
+
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      color: #0052FF;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+      padding-top: 20px;
+    }
+
+    h1 {
+      margin: 0;
+      text-align: center;
+      font-size: 3.5rem;
+      position: absolute;
+      top: 20px;
+      color: #0052FF;
+    }
+
+    p {
+      color: white;
+      margin-top: 100px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    canvas {
+      border: 2px solid #0052FF;
+      background: black;
+      width: 95vw;
+      max-width: 800px;
+      height: auto;
+      touch-action: none;
+    }
+  </style>
 </head>
+
 <body>
-<h1>Rocky's Base Project</h1>
-<div class="instructions">Desktop: W/S keys • Mobile: Drag finger up/down</div>
-<canvas id="gameCanvas" width="800" height="400"></canvas>
+  <h1>Rocky's Base Project</h1>
 
-<div id="opinion-section">
-<h2>Monad Ecosystem — My Personal Opinion</h2>
-<p>The content below reflects my personal opinions, concerns, and experiences. Readers should conduct their own research before making financial or cryptocurrency decisions.</p>
-<p>I have concerns regarding aspects of the Monad ecosystem, project incentives, marketing approaches, and airdrop allocation decisions. These views are my opinions and observations.</p>
-<p>Always perform independent due diligence and evaluate projects, teams, tokens, wallets, exchanges, NFT collections, and DeFi platforms using multiple sources of information.</p>
-</div>
+  <p>Desktop: W/S keys • Mobile: Drag finger up/down</p>
 
-<script>
-const canvas=document.getElementById("gameCanvas");
-const ctx=canvas.getContext("2d");
-const paddleWidth=10,paddleHeight=80;
-let playerY=canvas.height/2-paddleHeight/2;
-let aiY=canvas.height/2-paddleHeight/2;
-let ballX=canvas.width/2,ballY=canvas.height/2;
-let ballSpeedX=5,ballSpeedY=4;
-const keys={};
+  <canvas id="gameCanvas" width="800" height="400"></canvas>
 
-document.addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
-document.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
 
-canvas.addEventListener("touchmove",e=>{
-e.preventDefault();
-const rect=canvas.getBoundingClientRect();
-playerY=e.touches[0].clientY-rect.top-paddleHeight/2;
-if(playerY<0)playerY=0;
-if(playerY>canvas.height-paddleHeight)playerY=canvas.height-paddleHeight;
-},{passive:false});
+    const paddleWidth = 10;
+    const paddleHeight = 80;
 
-function drawRect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h)}
-function drawBall(x,y,r,c){ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()}
+    let playerY = canvas.height / 2 - paddleHeight / 2;
+    let aiY = canvas.height / 2 - paddleHeight / 2;
 
-function update(){
-if(keys["w"]&&playerY>0)playerY-=6;
-if(keys["s"]&&playerY<canvas.height-paddleHeight)playerY+=6;
+    let ballX = canvas.width / 2;
+    let ballY = canvas.height / 2;
 
-const aiCenter=aiY+paddleHeight/2;
-if(aiCenter<ballY-20)aiY+=4; else if(aiCenter>ballY+20)aiY-=4;
+    let ballSpeedX = 5;
+    let ballSpeedY = 4;
 
-ballX+=ballSpeedX; ballY+=ballSpeedY;
+    const keys = {};
 
-if(ballY<=0||ballY>=canvas.height)ballSpeedY*=-1;
+    // Keyboard controls
+    document.addEventListener("keydown", (e) => {
+      keys[e.key.toLowerCase()] = true;
+    });
 
-if(ballX<=20&&ballY>playerY&&ballY<playerY+paddleHeight)ballSpeedX*=-1;
-if(ballX>=canvas.width-20&&ballY>aiY&&ballY<aiY+paddleHeight)ballSpeedX*=-1;
+    document.addEventListener("keyup", (e) => {
+      keys[e.key.toLowerCase()] = false;
+    });
 
-if(ballX<0||ballX>canvas.width){
-ballX=canvas.width/2; ballY=canvas.height/2; ballSpeedX*=-1;
-}
-}
+    // Mobile touch controls
+    canvas.addEventListener("touchmove", (e) => {
+      e.preventDefault();
 
-function draw(){
-drawRect(0,0,canvas.width,canvas.height,"black");
-for(let i=0;i<canvas.height;i+=20){drawRect(canvas.width/2-1,i,2,10,"#333");}
-drawRect(10,playerY,paddleWidth,paddleHeight,"#0052FF");
-drawRect(canvas.width-20,aiY,paddleWidth,paddleHeight,"#0052FF");
-drawBall(ballX,ballY,8,"white");
-}
+      const rect = canvas.getBoundingClientRect();
+      const touchY = e.touches[0].clientY - rect.top;
 
-(function gameLoop(){update();draw();requestAnimationFrame(gameLoop);})();
-</script>
+      playerY = touchY - paddleHeight / 2;
+
+      // Keep paddle in bounds
+      if (playerY < 0) playerY = 0;
+
+      if (playerY > canvas.height - paddleHeight) {
+        playerY = canvas.height - paddleHeight;
+      }
+    }, { passive: false });
+
+    function drawRect(x, y, w, h, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, w, h);
+    }
+
+    function drawBall(x, y, r, color) {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function update() {
+      // Desktop movement
+      if (keys["w"] && playerY > 0) {
+        playerY -= 6;
+      }
+
+      if (keys["s"] && playerY < canvas.height - paddleHeight) {
+        playerY += 6;
+      }
+
+      // AI movement
+      const aiCenter = aiY + paddleHeight / 2;
+
+      if (aiCenter < ballY - 20) {
+        aiY += 4;
+      } else if (aiCenter > ballY + 20) {
+        aiY -= 4;
+      }
+
+      // Ball movement
+      ballX += ballSpeedX;
+      ballY += ballSpeedY;
+
+      // Top/bottom bounce
+      if (ballY <= 0 || ballY >= canvas.height) {
+        ballSpeedY *= -1;
+      }
+
+      // Player paddle collision
+      if (
+        ballX <= 20 &&
+        ballY > playerY &&
+        ballY < playerY + paddleHeight
+      ) {
+        ballSpeedX *= -1;
+      }
+
+      // AI paddle collision
+      if (
+        ballX >= canvas.width - 20 &&
+        ballY > aiY &&
+        ballY < aiY + paddleHeight
+      ) {
+        ballSpeedX *= -1;
+      }
+
+      // Reset ball
+      if (ballX < 0 || ballX > canvas.width) {
+        ballX = canvas.width / 2;
+        ballY = canvas.height / 2;
+        ballSpeedX *= -1;
+      }
+    }
+
+    function draw() {
+      drawRect(0, 0, canvas.width, canvas.height, "black");
+
+      // Middle line
+      for (let i = 0; i < canvas.height; i += 20) {
+        drawRect(canvas.width / 2 - 1, i, 2, 10, "#333");
+      }
+
+      // Player paddle
+      drawRect(10, playerY, paddleWidth, paddleHeight, "#0052FF");
+
+      // AI paddle
+      drawRect(
+        canvas.width - 20,
+        aiY,
+        paddleWidth,
+        paddleHeight,
+        "#0052FF"
+      );
+
+      // Ball
+      drawBall(ballX, ballY, 8, "white");
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+  </script>
 </body>
 </html>
