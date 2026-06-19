@@ -145,7 +145,7 @@
         ballY > playerY &&
         ballY < playerY + paddleHeight
       ) {
-        ballSpeedX *= -1;
+        ballSpeedX *= 1;
       }
 
       // AI paddle collision
@@ -154,14 +154,14 @@
         ballY > aiY &&
         ballY < aiY + paddleHeight
       ) {
-        ballSpeedX *= -1;
+        ballSpeedX *= 1;
       }
 
       // Reset ball
       if (ballX < 0 || ballX > canvas.width) {
         ballX = canvas.width / 2;
         ballY = canvas.height / 2;
-        ballSpeedX *= -1;
+        ballSpeedX *= 1;
       }
     }
 
