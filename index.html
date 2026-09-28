@@ -1,12 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="base:app_id" content="698d6ec5b3590846b38398f8" />
-  <title>Rocky's Base Project</title>
-
-  <style>
+  <title>Rocky's Base Project</title>  <style>
     body {
       margin: 0;
       background: black;
@@ -37,6 +34,51 @@
       text-align: center;
     }
 
+    #walletSection {
+      margin-top: 10px;
+      margin-bottom: 15px;
+      text-align: center;
+      z-index: 10;
+    }
+
+    button {
+      background: #0052FF;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 18px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 4px;
+    }
+
+    button:hover {
+      opacity: 0.85;
+    }
+
+    #walletAddress {
+      color: white;
+      font-size: 13px;
+      margin-top: 8px;
+      word-break: break-all;
+    }
+
+    #status {
+      color: #00ff88;
+      font-size: 13px;
+      margin-top: 6px;
+      max-width: 90vw;
+      text-align: center;
+    }
+
+    #txLink {
+      color: #00aaff;
+      font-size: 13px;
+      margin-top: 5px;
+      display: block;
+    }
+
     canvas {
       border: 2px solid #0052FF;
       background: black;
@@ -45,17 +87,191 @@
       height: auto;
       touch-action: none;
     }
-  </style>
-</head>
+  </style></head><body>
+  <h1>Rocky's Base Project</h1>  <p>Desktop: W/S keys • Mobile: Drag finger up/down</p>  <!-- Base / Builder Code section -->  <div id="walletSection"><button id="connectButton">
+  Connect Wallet
+</button>
 
-<body>
-  <h1>Rocky's Base Project</h1>
+<button id="testButton" style="display:none;">
+  Send 0 ETH Test Transaction
+</button>
 
-  <p>Desktop: W/S keys • Mobile: Drag finger up/down</p>
+<div id="0x3d8250ac679dcfd1e90c29e7a64ab5013645e579"></div>
+<div id="status"></div>
+<a id="txLink" target="_blank"></a>
 
-  <canvas id="gameCanvas" width="800" height="400"></canvas>
+  </div><canvas id="gameCanvas" width="800" height="400"></canvas>
 
-  <script>
+  <!-- Viem + OX directly from CDN -->  <script type="module">
+
+    import {
+      createWalletClient,
+      custom,
+      parseEther
+    } from "https://esm.sh/viem@2.45.0";
+
+    import { base } from "https://esm.sh/viem@2.45.0/chains";
+
+    import {
+      Attribution
+    } from "https://esm.sh/ox@0.9.7/erc8021";
+
+    /*
+     * ============================================================
+     * ROCKY'S BASE BUILDER CODE
+     * ============================================================
+     */
+
+    const BUILDER_CODE = "bc_q8bj3kjd";
+
+    /*
+     * Base's recommended ERC-8021 data suffix.
+     * This is automatically attached to transactions
+     * sent through this wallet client.
+     */
+
+    const DATA_SUFFIX = Attribution.toDataSuffix({
+      codes: [BUILDER_CODE]
+    });
+
+    let walletClient = null;
+    let connectedAddress = null;
+
+    const connectButton = document.getElementById("connectButton");
+    const testButton = document.getElementById("testButton");
+    const walletAddress = document.getElementById("walletAddress");
+    const status = document.getElementById("status");
+    const txLink = document.getElementById("txLink");
+
+    /*
+     * CONNECT WALLET
+     */
+
+    connectButton.addEventListener("click", async () => {
+
+      if (!window.ethereum) {
+        status.textContent =
+          "No Ethereum wallet detected. Open this website in MetaMask or another compatible wallet.";
+        return;
+      }
+
+      try {
+
+        status.textContent = "Connecting wallet...";
+
+        walletClient = createWalletClient({
+          chain: base,
+          transport: custom(window.ethereum),
+          dataSuffix: DATA_SUFFIX
+        });
+
+        const addresses = await walletClient.requestAddresses();
+
+        connectedAddress = addresses[0];
+
+        /*
+         * Make sure the wallet is on Base.
+         */
+
+        await walletClient.switchChain({
+          id: base.id
+        });
+
+        walletAddress.textContent =
+          "Connected: " +
+          connectedAddress;
+
+        status.textContent =
+          "Connected to Base • Builder Code: " +
+          BUILDER_CODE;
+
+        connectButton.textContent = "Wallet Connected";
+
+        testButton.style.display = "inline-block";
+
+      } catch (error) {
+
+        console.error(error);
+
+        status.textContent =
+          "Connection cancelled or failed: " +
+          (error.shortMessage || error.message);
+
+      }
+
+    });
+
+    /*
+     * TEST TRANSACTION
+     *
+     * Sends 0 ETH to the connected wallet itself.
+     *
+     * This creates a real Base transaction and attaches
+     * Rocky's Builder Code through DATA_SUFFIX.
+     *
+     * The transaction still requires Base gas.
+     */
+
+    testButton.addEventListener("click", async () => {
+
+      if (!walletClient || !connectedAddress) {
+        status.textContent = "Connect your wallet first.";
+        return;
+      }
+
+      try {
+
+        testButton.disabled = true;
+
+        status.textContent =
+          "Confirm the transaction in your wallet...";
+
+        txLink.textContent = "";
+        txLink.removeAttribute("href");
+
+        const hash = await walletClient.sendTransaction({
+
+          account: connectedAddress,
+
+          to: connectedAddress,
+
+          value: 0n
+
+        });
+
+        status.textContent =
+          "Transaction submitted successfully!";
+
+        txLink.textContent =
+          "View transaction on BaseScan";
+
+        txLink.href =
+          "https://basescan.org/tx/" + hash;
+
+        console.log("Transaction:", hash);
+        console.log("Builder Code:", BUILDER_CODE);
+        console.log("Data Suffix:", DATA_SUFFIX);
+
+      } catch (error) {
+
+        console.error(error);
+
+        status.textContent =
+          "Transaction failed or cancelled: " +
+          (error.shortMessage || error.message);
+
+      } finally {
+
+        testButton.disabled = false;
+
+      }
+
+    });
+
+  </script>  <!-- ==========================================================
+       PONG GAME
+       ========================================================== -->  <script>
+
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
@@ -74,6 +290,7 @@
     const keys = {};
 
     // Keyboard controls
+
     document.addEventListener("keydown", (e) => {
       keys[e.key.toLowerCase()] = true;
     });
@@ -83,100 +300,195 @@
     });
 
     // Mobile touch controls
+
     canvas.addEventListener("touchmove", (e) => {
+
       e.preventDefault();
 
       const rect = canvas.getBoundingClientRect();
-      const touchY = e.touches[0].clientY - rect.top;
 
-      playerY = touchY - paddleHeight / 2;
+      const touchY =
+        e.touches[0].clientY - rect.top;
 
-      // Keep paddle in bounds
-      if (playerY < 0) playerY = 0;
+      playerY =
+        touchY - paddleHeight / 2;
 
-      if (playerY > canvas.height - paddleHeight) {
+      if (playerY < 0)
+        playerY = 0;
+
+      if (playerY > canvas.height - paddleHeight)
         playerY = canvas.height - paddleHeight;
-      }
+
     }, { passive: false });
 
+
     function drawRect(x, y, w, h, color) {
+
       ctx.fillStyle = color;
+
       ctx.fillRect(x, y, w, h);
+
     }
+
 
     function drawBall(x, y, r, color) {
+
       ctx.fillStyle = color;
+
       ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
+
+      ctx.arc(
+        x,
+        y,
+        r,
+        0,
+        Math.PI * 2
+      );
+
       ctx.fill();
+
     }
 
+
     function update() {
+
       // Desktop movement
+
       if (keys["w"] && playerY > 0) {
         playerY -= 6;
       }
 
-      if (keys["s"] && playerY < canvas.height - paddleHeight) {
+      if (
+        keys["s"] &&
+        playerY < canvas.height - paddleHeight
+      ) {
         playerY += 6;
       }
 
+
       // AI movement
-      const aiCenter = aiY + paddleHeight / 2;
+
+      const aiCenter =
+        aiY + paddleHeight / 2;
 
       if (aiCenter < ballY - 20) {
+
         aiY += 4;
+
       } else if (aiCenter > ballY + 20) {
+
         aiY -= 4;
+
       }
 
+
       // Ball movement
+
       ballX += ballSpeedX;
       ballY += ballSpeedY;
 
+
       // Top/bottom bounce
-      if (ballY <= 0 || ballY >= canvas.height) {
+
+      if (
+        ballY <= 0 ||
+        ballY >= canvas.height
+      ) {
+
         ballSpeedY *= 1;
+
       }
 
+
       // Player paddle collision
+
       if (
         ballX <= 20 &&
         ballY > playerY &&
         ballY < playerY + paddleHeight
       ) {
+
         ballSpeedX *= 1;
+
       }
 
+
       // AI paddle collision
+
       if (
         ballX >= canvas.width - 20 &&
         ballY > aiY &&
         ballY < aiY + paddleHeight
       ) {
+
         ballSpeedX *= 1;
+
       }
+
 
       // Reset ball
-      if (ballX < 0 || ballX > canvas.width) {
-        ballX = canvas.width / 2;
-        ballY = canvas.height / 2;
+
+      if (
+        ballX < 0 ||
+        ballX > canvas.width
+      ) {
+
+        ballX =
+          canvas.width / 2;
+
+        ballY =
+          canvas.height / 2;
+
         ballSpeedX *= 1;
+
       }
+
     }
 
+
     function draw() {
-      drawRect(0, 0, canvas.width, canvas.height, "black");
+
+      drawRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+        "black"
+      );
+
 
       // Middle line
-      for (let i = 0; i < canvas.height; i += 20) {
-        drawRect(canvas.width / 2 - 1, i, 2, 10, "#333");
+
+      for (
+        let i = 0;
+        i < canvas.height;
+        i += 20
+      ) {
+
+        drawRect(
+          canvas.width / 2 - 1,
+          i,
+          2,
+          10,
+          "#333"
+        );
+
       }
 
+
       // Player paddle
-      drawRect(10, playerY, paddleWidth, paddleHeight, "#0052FF");
+
+      drawRect(
+        10,
+        playerY,
+        paddleWidth,
+        paddleHeight,
+        "#0052FF"
+      );
+
 
       // AI paddle
+
       drawRect(
         canvas.width - 20,
         aiY,
@@ -185,17 +497,30 @@
         "#0052FF"
       );
 
+
       // Ball
-      drawBall(ballX, ballY, 8, "red");
+
+      drawBall(
+        ballX,
+        ballY,
+        8,
+        "red"
+      );
+
     }
 
+
     function gameLoop() {
+
       update();
+
       draw();
+
       requestAnimationFrame(gameLoop);
+
     }
 
     gameLoop();
-  </script>
-</body>
+
+  </script></body>
 </html>
