@@ -347,16 +347,11 @@ function showConnected() {
   TEST BUILDER CODE
 ========================================================
 */
-
 async function testBuilderCode() {
 
   if (!provider || !account) {
-
-    message.textContent =
-      "Connect MetaMask first.";
-
+    message.textContent = "Connect MetaMask first.";
     return;
-
   }
 
   try {
@@ -366,13 +361,19 @@ async function testBuilderCode() {
     message.textContent =
       "Opening MetaMask transaction confirmation...";
 
+    /*
+      Base Multicall3 contract.
+      This is a smart contract, so calldata is allowed.
+    */
+    const MULTICALL3 =
+      "0xcA11bde05977b3631167028862bE2a173976CA11";
 
     /*
-      A zero-value transaction to the connected wallet.
-
-      The ERC-8021 Builder Code is supplied through
-      wallet_sendCalls using the dataSuffix capability.
+      Multicall3 getCurrentBlockTimestamp()
+      selector = 0x0b3f5e9e
     */
+    const CALL_DATA =
+      "0x0b3f5e9e";
 
     const response = await provider.request({
 
@@ -390,11 +391,11 @@ async function testBuilderCode() {
 
         calls: [{
 
-          to: account,
+          to: MULTICALL3,
 
           value: "0x0",
 
-          data: "0x"
+          data: CALL_DATA
 
         }],
 
@@ -414,22 +415,12 @@ async function testBuilderCode() {
 
     });
 
-
-    console.log(
-      "Builder Code:",
-      BUILDER_CODE
-    );
-
-    console.log(
-      "wallet_sendCalls response:",
-      response
-    );
-
+    console.log("Builder Code:", BUILDER_CODE);
+    console.log("Response:", response);
 
     message.innerHTML =
       "Builder Code transaction submitted.<br><br>" +
-      "Code: " + BUILDER_CODE;
-
+      "Builder Code: " + BUILDER_CODE;
 
   } catch (error) {
 
@@ -444,9 +435,7 @@ async function testBuilderCode() {
     testBtn.disabled = false;
 
   }
-
 }
-
 
 /*
 ========================================================
