@@ -6,7 +6,10 @@
 
   <title>Rocky's Base Project</title>
 
-  <meta name="base:app_id" content="698d6ec5b3590846b38398f8">
+  <meta
+    name="base:app_id"
+    content="698d6ec5b3590846b38398f8"
+  >
 
   <style>
     * {
@@ -22,6 +25,7 @@
     }
 
     .container {
+      width: 100%;
       max-width: 600px;
       margin: auto;
       padding: 35px 20px;
@@ -55,10 +59,12 @@
       color: white;
       font-size: 16px;
       font-weight: bold;
+      cursor: pointer;
     }
 
     button:disabled {
       opacity: 0.5;
+      cursor: not-allowed;
     }
 
     #status {
@@ -66,6 +72,7 @@
       color: #aaa;
       margin: 12px 0;
       font-size: 14px;
+      line-height: 1.5;
     }
 
     #message {
@@ -73,6 +80,7 @@
       margin-top: 15px;
       color: #60a5fa;
       word-break: break-word;
+      line-height: 1.5;
     }
 
     #game {
@@ -119,66 +127,97 @@
 
   </div>
 
-  <canvas id="game" width="500" height="300"></canvas>
+  <canvas
+    id="game"
+    width="500"
+    height="300">
+  </canvas>
 
 </div>
 
 
 <script type="module">
 
-/*
-========================================================
- METAMASK CONNECT
-========================================================
-*/
+/* =====================================================
+   METAMASK CONNECT
+===================================================== */
 
-import { createEVMClient }
-  from "https://esm.sh/@metamask/connect-evm";
+import {
+  createEVMClient
+} from "https://esm.sh/@metamask/connect-evm";
 
 
-/*
-========================================================
- SETTINGS
-========================================================
-*/
+/* =====================================================
+   NETWORKS
+===================================================== */
 
-// Base Mainnet
+const ETHEREUM_CHAIN_ID = "0x1";
+
 const BASE_CHAIN_ID = "0x2105";
 
-// Your Builder Code
+
+/* =====================================================
+   BUILDER CODE
+===================================================== */
+
 const BUILDER_CODE = "bc_q8bj3kjd";
 
 
 /*
-========================================================
- ERC-8021 BUILDER CODE
-========================================================
+  ERC-8021 Schema 0
 
- schemaData:
-   Builder Code bytes
-   + number of codes
+  Builder Code:
+  bc_q8bj3kjd
 
- schema:
-   schema ID 0
+  Hex:
+  62635f7138626a336b6a64
 
- marker:
-   ERC-8021 marker
-========================================================
+  Length:
+  0b
+
+  Schema:
+  00
+
+  ERC-8021 marker:
+  80218021802180218021802180218021
 */
 
 const BUILDER_SUFFIX =
   "0x" +
   "62635f7138626a336b6a64" +
-  "01" +
+  "0b" +
   "00" +
   "80218021802180218021802180218021";
 
 
+/* =====================================================
+   BASE RPC
+===================================================== */
+
+const BASE_RPC =
+  "https://mainnet.base.org";
+
+
+/* =====================================================
+   MULTICALL3
+===================================================== */
+
+const MULTICALL3 =
+  "0xcA11bde05977b3631167028862bE2a173976CA11";
+
+
 /*
-========================================================
- ELEMENTS
-========================================================
+  Multicall3:
+  getCurrentBlockTimestamp()
 */
+
+const CALL_DATA =
+  "0x0b3f5e9e";
+
+
+/* =====================================================
+   PAGE ELEMENTS
+===================================================== */
 
 const connectBtn =
   document.getElementById("connectBtn");
@@ -196,23 +235,44 @@ const message =
   document.getElementById("message");
 
 
-/*
-========================================================
- VARIABLES
-========================================================
-*/
+/* =====================================================
+   WALLET VARIABLES
+===================================================== */
 
 let evmClient = null;
+
 let provider = null;
+
 let account = null;
+
 let currentChain = null;
 
 
-/*
-========================================================
- INITIALIZE METAMASK CONNECT
-========================================================
-*/
+/* =====================================================
+   ERROR MESSAGE
+===================================================== */
+
+function getErrorMessage(error) {
+
+  if (!error) {
+    return "Unknown error";
+  }
+
+  if (error.message) {
+    return error.message;
+  }
+
+  if (error.rpcMessage) {
+    return error.rpcMessage;
+  }
+
+  return String(error);
+}
+
+
+/* =====================================================
+   INITIALIZE METAMASK CONNECT
+===================================================== */
 
 async function initializeWallet() {
 
@@ -221,51 +281,85 @@ async function initializeWallet() {
     message.textContent =
       "Loading MetaMask...";
 
-    evmClient = await createEVMClient({
 
-      dapp: {
+    evmClient =
+      await createEVMClient({
 
-        name: "Rocky's Base Project",
+        dapp: {
 
-        url: window.location.href
+          name:
+            "Rocky's Base Project",
 
-      },
+          url:
+            window.location.href
 
-      api: {
+        },
 
-        supportedNetworks: {
+        api: {
 
-          "0x2105":
-            "https://mainnet.base.org"
+          supportedNetworks: {
+
+            /*
+              Ethereum Mainnet is included because
+              MetaMask may currently have an existing
+              Ethereum session.
+            */
+
+            "0x1":
+              "https://cloudflare-eth.com",
+
+            /*
+              Base Mainnet
+            */
+
+            "0x2105":
+              BASE_RPC
+
+          }
 
         }
 
-      }
+      });
 
-    });
 
     provider =
       evmClient.getProvider();
 
 
     /*
-    Listen for account changes
+      Account changes
     */
 
     provider.on(
       "accountsChanged",
-      accountsChanged
+      handleAccountsChanged
     );
 
 
     /*
-    Listen for chain changes
+      Network changes
     */
 
     provider.on(
       "chainChanged",
-      chainChanged
+      handleChainChanged
     );
+
+
+    /*
+      Detect current chain
+    */
+
+    try {
+
+      currentChain =
+        await evmClient.getChainId();
+
+    } catch (e) {
+
+      currentChain = null;
+
+    }
 
 
     message.textContent =
@@ -284,11 +378,9 @@ async function initializeWallet() {
 }
 
 
-/*
-========================================================
- CONNECT
-========================================================
-*/
+/* =====================================================
+   CONNECT WALLET
+===================================================== */
 
 async function connectWallet() {
 
@@ -301,15 +393,21 @@ async function connectWallet() {
 
 
     /*
-    MetaMask Connect handles mobile
-    deeplinking automatically.
+      Both networks are allowed during the
+      MetaMask connection.
+
+      We then explicitly switch to Base.
     */
 
     const result =
       await evmClient.connect({
 
         chainIds: [
+
+          ETHEREUM_CHAIN_ID,
+
           BASE_CHAIN_ID
+
         ],
 
         forceRequest: true
@@ -325,11 +423,12 @@ async function connectWallet() {
 
 
     /*
-    If MetaMask connected to another
-    chain, switch to Base.
+      Force Base.
     */
 
-    if (currentChain !== BASE_CHAIN_ID) {
+    if (
+      currentChain !== BASE_CHAIN_ID
+    ) {
 
       await switchToBase();
 
@@ -338,8 +437,15 @@ async function connectWallet() {
 
     updateWalletDisplay();
 
-    message.textContent =
-      "Connected to Base.";
+
+    if (
+      currentChain === BASE_CHAIN_ID
+    ) {
+
+      message.textContent =
+        "Connected to Base.";
+
+    }
 
   } catch (error) {
 
@@ -358,15 +464,15 @@ async function connectWallet() {
 }
 
 
-/*
-========================================================
- SWITCH TO BASE
-========================================================
-*/
+/* =====================================================
+   SWITCH TO BASE
+===================================================== */
 
 async function switchToBase() {
 
   try {
+
+    switchBtn.disabled = true;
 
     message.textContent =
       "Switching MetaMask to Base...";
@@ -374,28 +480,37 @@ async function switchToBase() {
 
     await evmClient.switchChain({
 
-      chainId: BASE_CHAIN_ID,
+      chainId:
+        BASE_CHAIN_ID,
 
       chainConfiguration: {
 
-        chainName: "Base",
+        chainName:
+          "Base",
 
         nativeCurrency: {
 
-          name: "Ether",
+          name:
+            "Ether",
 
-          symbol: "ETH",
+          symbol:
+            "ETH",
 
-          decimals: 18
+          decimals:
+            18
 
         },
 
         rpcUrls: [
-          "https://mainnet.base.org"
+
+          BASE_RPC
+
         ],
 
         blockExplorerUrls: [
+
           "https://basescan.org"
+
         ]
 
       }
@@ -410,6 +525,9 @@ async function switchToBase() {
     updateWalletDisplay();
 
 
+    message.textContent =
+      "MetaMask is now on Base.";
+
   } catch (error) {
 
     console.error(error);
@@ -418,18 +536,20 @@ async function switchToBase() {
       "Could not switch to Base: " +
       getErrorMessage(error);
 
+  } finally {
+
+    switchBtn.disabled = false;
+
   }
 
 }
 
 
-/*
-========================================================
- ACCOUNT CHANGED
-========================================================
-*/
+/* =====================================================
+   ACCOUNT CHANGED
+===================================================== */
 
-function accountsChanged(accounts) {
+function handleAccountsChanged(accounts) {
 
   if (
     !accounts ||
@@ -438,11 +558,7 @@ function accountsChanged(accounts) {
 
     account = null;
 
-    status.textContent =
-      "Wallet not connected";
-
-    testBtn.disabled = true;
-    switchBtn.disabled = true;
+    updateWalletDisplay();
 
     return;
 
@@ -457,13 +573,11 @@ function accountsChanged(accounts) {
 }
 
 
-/*
-========================================================
- CHAIN CHANGED
-========================================================
-*/
+/* =====================================================
+   CHAIN CHANGED
+===================================================== */
 
-function chainChanged(chainId) {
+function handleChainChanged(chainId) {
 
   currentChain =
     chainId;
@@ -473,11 +587,9 @@ function chainChanged(chainId) {
 }
 
 
-/*
-========================================================
- UPDATE DISPLAY
-========================================================
-*/
+/* =====================================================
+   UPDATE WALLET DISPLAY
+===================================================== */
 
 function updateWalletDisplay() {
 
@@ -486,8 +598,14 @@ function updateWalletDisplay() {
     status.textContent =
       "Wallet not connected";
 
-    testBtn.disabled = true;
-    switchBtn.disabled = true;
+    connectBtn.textContent =
+      "Connect MetaMask";
+
+    switchBtn.disabled =
+      true;
+
+    testBtn.disabled =
+      true;
 
     return;
 
@@ -505,34 +623,54 @@ function updateWalletDisplay() {
     connectBtn.textContent =
       "MetaMask Connected";
 
-    testBtn.disabled = false;
-    switchBtn.disabled = true;
+    switchBtn.disabled =
+      true;
+
+    testBtn.disabled =
+      false;
 
   } else {
 
     status.innerHTML =
-      "<strong>Wallet connected</strong><br><br>" +
+      "<strong>Wallet Connected</strong><br><br>" +
       account +
       "<br><br>" +
-      "Wrong network";
+      "<strong>Current network:</strong> " +
+      (currentChain || "Unknown") +
+      "<br><br>" +
+      "Base is required.";
 
-    testBtn.disabled = true;
-    switchBtn.disabled = false;
+    connectBtn.textContent =
+      "MetaMask Connected";
+
+    switchBtn.disabled =
+      false;
+
+    testBtn.disabled =
+      true;
 
   }
 
 }
 
 
-/*
-========================================================
- TEST BUILDER CODE
-========================================================
-*/
+/* =====================================================
+   TEST BUILDER CODE
+===================================================== */
 
 async function testBuilderCode() {
 
-  if (!provider || !account) {
+  if (!provider) {
+
+    message.textContent =
+      "MetaMask is not connected.";
+
+    return;
+
+  }
+
+
+  if (!account) {
 
     message.textContent =
       "Connect MetaMask first.";
@@ -542,7 +680,9 @@ async function testBuilderCode() {
   }
 
 
-  if (currentChain !== BASE_CHAIN_ID) {
+  if (
+    currentChain !== BASE_CHAIN_ID
+  ) {
 
     message.textContent =
       "Switch to Base first.";
@@ -557,55 +697,51 @@ async function testBuilderCode() {
     testBtn.disabled = true;
 
     message.textContent =
-      "Opening MetaMask...";
+      "Opening MetaMask transaction confirmation...";
 
 
     /*
-    Base Multicall3 contract.
+      EIP-5792 wallet_sendCalls
 
-    This is a smart contract, NOT a wallet address.
-    Therefore calldata is permitted.
-    */
-
-    const MULTICALL3 =
-      "0xcA11bde05977b3631167028862bE2a173976CA11";
-
-
-    /*
-    Multicall3 getCurrentBlockTimestamp()
-    */
-
-    const CALL_DATA =
-      "0x0b3f5e9e";
-
-
-    /*
-    EIP-5792 wallet_sendCalls
-    with ERC-8021 dataSuffix.
+      Base recommends using the dataSuffix
+      capability for ERC-8021 Builder Codes.
     */
 
     const response =
       await provider.request({
 
-        method: "wallet_sendCalls",
+        method:
+          "wallet_sendCalls",
 
         params: [{
 
-          version: "1",
+          version:
+            "1",
 
-          from: account,
+          from:
+            account,
 
-          chainId: BASE_CHAIN_ID,
+          chainId:
+            BASE_CHAIN_ID,
 
-          atomicRequired: false,
+          atomicRequired:
+            false,
 
           calls: [{
 
-            to: MULTICALL3,
+            /*
+              Smart contract, NOT the user's
+              wallet address.
+            */
 
-            value: "0x0",
+            to:
+              MULTICALL3,
 
-            data: CALL_DATA
+            value:
+              "0x0",
+
+            data:
+              CALL_DATA
 
           }],
 
@@ -616,7 +752,8 @@ async function testBuilderCode() {
               value:
                 BUILDER_SUFFIX,
 
-              optional: true
+              optional:
+                true
 
             }
 
@@ -633,7 +770,7 @@ async function testBuilderCode() {
     );
 
     console.log(
-      "Builder suffix:",
+      "ERC-8021 suffix:",
       BUILDER_SUFFIX
     );
 
@@ -645,7 +782,7 @@ async function testBuilderCode() {
 
     message.innerHTML =
       "Builder Code transaction submitted.<br><br>" +
-      "Code: " +
+      "<strong>Builder Code:</strong><br>" +
       BUILDER_CODE;
 
 
@@ -666,36 +803,9 @@ async function testBuilderCode() {
 }
 
 
-/*
-========================================================
- ERROR HANDLER
-========================================================
-*/
-
-function getErrorMessage(error) {
-
-  if (!error) {
-    return "Unknown error";
-  }
-
-  if (error.message) {
-    return error.message;
-  }
-
-  if (error.rpcMessage) {
-    return error.rpcMessage;
-  }
-
-  return String(error);
-
-}
-
-
-/*
-========================================================
- BUTTONS
-========================================================
-*/
+/* =====================================================
+   BUTTON EVENTS
+===================================================== */
 
 connectBtn.addEventListener(
   "click",
@@ -713,20 +823,16 @@ testBtn.addEventListener(
 );
 
 
-/*
-========================================================
- START WALLET
-========================================================
-*/
+/* =====================================================
+   START METAMASK
+===================================================== */
 
 initializeWallet();
 
 
-/*
-========================================================
- PONG GAME
-========================================================
-*/
+/* =====================================================
+   PONG GAME
+===================================================== */
 
 const canvas =
   document.getElementById("game");
@@ -735,17 +841,24 @@ const ctx =
   canvas.getContext("2d");
 
 let ballX = 250;
+
 let ballY = 150;
 
 let ballDX = 3;
+
 let ballDY = 3;
 
 let paddleY = 125;
 
 
+/* =====================================================
+   GAME LOOP
+===================================================== */
+
 function gameLoop() {
 
-  ctx.fillStyle = "black";
+  ctx.fillStyle =
+    "black";
 
   ctx.fillRect(
     0,
@@ -755,7 +868,12 @@ function gameLoop() {
   );
 
 
-  ctx.fillStyle = "#2563eb";
+  /*
+    Paddle
+  */
+
+  ctx.fillStyle =
+    "#2563eb";
 
   ctx.fillRect(
     10,
@@ -764,6 +882,10 @@ function gameLoop() {
     50
   );
 
+
+  /*
+    Ball
+  */
 
   ctx.beginPath();
 
@@ -778,9 +900,18 @@ function gameLoop() {
   ctx.fill();
 
 
+  /*
+    Move ball
+  */
+
   ballX += ballDX;
+
   ballY += ballDY;
 
+
+  /*
+    Top / bottom
+  */
 
   if (
     ballY <= 7 ||
@@ -791,6 +922,10 @@ function gameLoop() {
 
   }
 
+
+  /*
+    Paddle collision
+  */
 
   if (
     ballX <= 20 &&
@@ -803,11 +938,16 @@ function gameLoop() {
   }
 
 
+  /*
+    Reset
+  */
+
   if (
     ballX >= canvas.width - 7
   ) {
 
     ballX = 250;
+
     ballY = 150;
 
   }
@@ -820,11 +960,9 @@ function gameLoop() {
 }
 
 
-/*
-========================================================
- PADDLE CONTROL
-========================================================
-*/
+/* =====================================================
+   MOUSE CONTROL
+===================================================== */
 
 document.addEventListener(
   "mousemove",
@@ -851,11 +989,9 @@ document.addEventListener(
 );
 
 
-/*
-========================================================
- START GAME
-========================================================
-*/
+/* =====================================================
+   START GAME
+===================================================== */
 
 gameLoop();
 
