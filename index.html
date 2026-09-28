@@ -2,64 +2,56 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Rocky's Base Project</title>
-
-  <meta
-    name="base:app_id"
-    content="698d6ec5b3590846b38398f8"
-  >
+  <title>Base ERC-8021 Attribution Test</title>
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
     body {
-      margin: 0;
-      background: #050505;
-      color: white;
       font-family: Arial, sans-serif;
-      text-align: center;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 600px;
-      margin: auto;
-      padding: 35px 20px;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 24px;
+      background: #111;
+      color: #fff;
     }
 
     h1 {
-      color: #3b82f6;
-      margin-bottom: 10px;
+      font-size: 24px;
+      margin-bottom: 8px;
     }
 
-    .subtitle {
+    .sub {
       color: #aaa;
-      margin-bottom: 30px;
+      margin-bottom: 24px;
     }
 
-    .wallet {
-      background: #111;
-      border: 1px solid #333;
-      border-radius: 15px;
-      padding: 20px;
-      margin-bottom: 25px;
+    label {
+      display: block;
+      margin-top: 18px;
+      margin-bottom: 6px;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #444;
+      background: #1c1c1c;
+      color: white;
+      font-size: 16px;
     }
 
     button {
       width: 100%;
-      padding: 15px;
-      margin: 8px 0;
+      padding: 14px;
+      margin-top: 18px;
       border: 0;
-      border-radius: 10px;
-      background: #2563eb;
-      color: white;
+      border-radius: 8px;
+      background: #fff;
+      color: #000;
       font-size: 16px;
       font-weight: bold;
       cursor: pointer;
@@ -70,1027 +62,780 @@
       cursor: not-allowed;
     }
 
-    #status {
+    .box {
+      margin-top: 20px;
+      padding: 14px;
+      border-radius: 8px;
+      background: #1b1b1b;
+      border: 1px solid #333;
       word-break: break-all;
+    }
+
+    .good {
+      color: #55e68a;
+    }
+
+    .bad {
+      color: #ff6b6b;
+    }
+
+    .small {
+      font-size: 13px;
       color: #aaa;
-      margin: 12px 0;
-      font-size: 14px;
       line-height: 1.5;
     }
 
-    #message {
-      min-height: 24px;
-      margin-top: 15px;
-      color: #60a5fa;
-      word-break: break-word;
-      line-height: 1.5;
+    code {
+      word-break: break-all;
+      color: #ddd;
     }
 
-    #game {
-      margin-top: 25px;
-      border: 2px solid #2563eb;
-      border-radius: 10px;
-      width: 100%;
-      max-width: 500px;
-      height: 300px;
-      background: black;
+    a {
+      color: #6ea8ff;
     }
   </style>
 </head>
 
 <body>
 
-<div class="container">
+  <h1>Base ERC-8021 Attribution Test</h1>
 
-  <h1>Rocky's Base Project</h1>
-
-  <div class="subtitle">
-    Base + MetaMask + ERC-8021 Builder Code
+  <div class="sub">
+    Sends a 0 ETH self-transaction on Base Mainnet with an ERC-8021 attribution suffix.
   </div>
 
-  <div class="wallet">
+  <button id="connectButton">
+    Connect MetaMask
+  </button>
 
-    <div id="status">
-      Wallet not connected
-    </div>
-
-    <button id="connectBtn">
-      Connect MetaMask
-    </button>
-
-    <button id="switchBtn" disabled>
-      Switch to Base
-    </button>
-
-    <button id="testBtn" disabled>
-      Test Builder Code
-    </button>
-
-    <div id="message"></div>
-
+  <div id="walletBox" class="box">
+    Wallet: Not connected
   </div>
 
-  <canvas
-    id="game"
-    width="500"
-    height="300">
-  </canvas>
+  <label for="builderCode">
+    Base Builder Code
+  </label>
 
-</div>
+  <input
+    id="builderCode"
+    type="text"
+    value="baseapp"
+    maxlength="32"
+    placeholder="Enter your Builder Code"
+  >
 
+  <div class="small">
+    Replace "baseapp" with your actual Builder Code from Base.
+  </div>
 
-<script type="module">
+  <button id="prepareButton" disabled>
+    Prepare ERC-8021 Transaction
+  </button>
 
-/* =====================================================
-   METAMASK CONNECT
-===================================================== */
+  <div id="details" class="box" style="display:none;"></div>
 
-import {
-  createEVMClient
-} from "https://esm.sh/@metamask/connect-evm";
+  <button id="sendButton" disabled>
+    Send ERC-8021 Transaction
+  </button>
 
+  <div id="status" class="box">
+    Status: Waiting for wallet connection.
+  </div>
 
-/* =====================================================
-   NETWORK
-===================================================== */
+<script>
+"use strict";
 
-const ETHEREUM_CHAIN_ID = "0x1";
+/*
+  ============================================================
+  BASE ERC-8021 TEST
+  ============================================================
+
+  Base Mainnet:
+    Chain ID: 8453
+    Hex:      0x2105
+
+  ERC-8021 Schema 0:
+
+    [codes]
+    [codesLength: 1 byte]
+    [schemaId: 1 byte]
+    [ERC-8021 marker: 16 bytes]
+
+  Marker:
+
+    80218021802180218021802180218021
+
+  Example "baseapp":
+
+    ASCII:
+      baseapp
+
+    Hex:
+      62617365617070
+
+    Length:
+      07
+
+    Schema:
+      00
+
+    Final suffix:
+
+      62617365617070070080218021802180218021802180218021
+*/
+
 
 const BASE_CHAIN_ID = "0x2105";
+const BASE_CHAIN_ID_DECIMAL = 8453;
 
-const BASE_RPC =
-  "https://mainnet.base.org";
-
-
-/* =====================================================
-   YOUR BUILDER CODE
-===================================================== */
-
-const BUILDER_CODE =
-  "bc_q8bj3kjd";
-
-
-/* =====================================================
-   ERC-8021 BUILDER CODE SUFFIX
-=====================================================
-
-   Builder Code:
-   bc_q8bj3kjd
-
-   UTF-8 hex:
-   62635f7138626a336b6a64
-
-   Length:
-   0b
-
-   Schema ID:
-   00
-
-   ERC-8021 marker:
-   80218021802180218021802180218021
-
-===================================================== */
-
-const BUILDER_SUFFIX =
-  "0x" +
-  "62635f7138626a336b6a64" +
-  "0b" +
-  "00" +
+const ERC8021_MARKER =
   "80218021802180218021802180218021";
 
-
-/* =====================================================
-   BASE USDC CONTRACT
-=====================================================
-
-   Base USDC:
-
-   0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
-
-===================================================== */
-
-const USDC =
-  "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+let provider = null;
+let walletAddress = null;
+let preparedData = null;
 
 
-/* =====================================================
-   PAGE ELEMENTS
-===================================================== */
+/*
+  ------------------------------------------------------------
+  DOM
+  ------------------------------------------------------------
+*/
 
-const connectBtn =
-  document.getElementById("connectBtn");
+const connectButton =
+  document.getElementById("connectButton");
 
-const switchBtn =
-  document.getElementById("switchBtn");
+const prepareButton =
+  document.getElementById("prepareButton");
 
-const testBtn =
-  document.getElementById("testBtn");
+const sendButton =
+  document.getElementById("sendButton");
 
-const status =
+const builderCodeInput =
+  document.getElementById("builderCode");
+
+const walletBox =
+  document.getElementById("walletBox");
+
+const details =
+  document.getElementById("details");
+
+const statusBox =
   document.getElementById("status");
 
-const message =
-  document.getElementById("message");
 
+/*
+  ------------------------------------------------------------
+  Helpers
+  ------------------------------------------------------------
+*/
 
-/* =====================================================
-   WALLET VARIABLES
-===================================================== */
+function setStatus(message, good = false, bad = false) {
+  statusBox.className = "box";
 
-let evmClient = null;
-
-let provider = null;
-
-let account = null;
-
-let currentChain = null;
-
-
-/* =====================================================
-   ERROR HANDLING
-===================================================== */
-
-function getErrorMessage(error) {
-
-  if (!error) {
-    return "Unknown error";
+  if (good) {
+    statusBox.classList.add("good");
   }
 
-  if (error.message) {
-    return error.message;
+  if (bad) {
+    statusBox.classList.add("bad");
   }
 
-  if (error.rpcMessage) {
-    return error.rpcMessage;
-  }
-
-  return String(error);
+  statusBox.innerHTML = message;
 }
 
 
-/* =====================================================
-   INITIALIZE METAMASK CONNECT
-===================================================== */
-
-async function initializeWallet() {
-
-  try {
-
-    message.textContent =
-      "Loading MetaMask...";
+function strip0x(value) {
+  return value.startsWith("0x")
+    ? value.slice(2)
+    : value;
+}
 
 
-    evmClient =
-      await createEVMClient({
+function asciiToHex(text) {
+  let result = "";
 
-        dapp: {
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
 
-          name:
-            "Rocky's Base Project",
+    if (code > 0x7f) {
+      throw new Error(
+        "Builder Code must contain ASCII characters only."
+      );
+    }
 
-          url:
-            window.location.href
+    result += code.toString(16).padStart(2, "0");
+  }
 
-        },
-
-        api: {
-
-          supportedNetworks: {
-
-            /*
-              Ethereum is included so MetaMask
-              can handle an existing Mainnet session.
-            */
-
-            "0x1":
-              "https://cloudflare-eth.com",
-
-            /*
-              Base Mainnet
-            */
-
-            "0x2105":
-              BASE_RPC
-
-          }
-
-        }
-
-      });
+  return result;
+}
 
 
-    provider =
-      evmClient.getProvider();
+function validateBuilderCode(code) {
 
+  if (!code) {
+    throw new Error("Builder Code cannot be empty.");
+  }
 
-    provider.on(
-      "accountsChanged",
-      handleAccountsChanged
+  if (code.length > 255) {
+    throw new Error(
+      "Builder Code is too long for Schema 0."
     );
+  }
+
+  /*
+    ERC-8021 codes are ASCII strings.
+
+    Reject:
+      comma
+      control characters
+      non-ASCII characters
+  */
+
+  for (let i = 0; i < code.length; i++) {
+
+    const c = code.charCodeAt(i);
+
+    if (c < 0x20 || c > 0x7e) {
+      throw new Error(
+        "Builder Code contains an invalid character."
+      );
+    }
+
+    if (code[i] === ",") {
+      throw new Error(
+        "A single Builder Code cannot contain a comma."
+      );
+    }
+  }
+}
 
 
-    provider.on(
-      "chainChanged",
-      handleChainChanged
-    );
+function buildERC8021Suffix(builderCode) {
+
+  validateBuilderCode(builderCode);
+
+  const codeHex =
+    asciiToHex(builderCode);
+
+  const codeLength =
+    (builderCode.length)
+      .toString(16)
+      .padStart(2, "0");
+
+  /*
+    Schema 0 = 00
+  */
+
+  const schemaId = "00";
+
+  const suffix =
+    codeHex +
+    codeLength +
+    schemaId +
+    ERC8021_MARKER;
+
+  return "0x" + suffix;
+}
 
 
-    /*
-      Read current chain directly.
-    */
+function verifyERC8021(data) {
+
+  const clean =
+    strip0x(data).toLowerCase();
+
+  const marker =
+    clean.slice(-32);
+
+  return marker ===
+    ERC8021_MARKER.toLowerCase();
+}
+
+
+function getSuffix(data) {
+
+  const clean =
+    strip0x(data);
+
+  return clean.slice(-32);
+}
+
+
+function shortAddress(address) {
+
+  if (!address) {
+    return "";
+  }
+
+  return (
+    address.slice(0, 6) +
+    "..." +
+    address.slice(-4)
+  );
+}
+
+
+/*
+  ------------------------------------------------------------
+  Connect MetaMask
+  ------------------------------------------------------------
+*/
+
+connectButton.addEventListener(
+  "click",
+  async () => {
 
     try {
 
-      currentChain =
-        await provider.request({
-          method: "eth_chainId"
-        });
-
-    } catch (error) {
-
-      currentChain = null;
-
-    }
-
-
-    updateWalletDisplay();
-
-
-    message.textContent =
-      "Ready.";
-
-  } catch (error) {
-
-    console.error(error);
-
-    message.textContent =
-      "MetaMask initialization failed: " +
-      getErrorMessage(error);
-
-  }
-
-}
-
-
-/* =====================================================
-   CONNECT
-===================================================== */
-
-async function connectWallet() {
-
-  try {
-
-    connectBtn.disabled = true;
-
-    message.textContent =
-      "Opening MetaMask...";
-
-
-    const result =
-      await evmClient.connect({
-
-        chainIds: [
-          ETHEREUM_CHAIN_ID,
-          BASE_CHAIN_ID
-        ],
-
-        forceRequest: true
-
-      });
-
-
-    account =
-      result.accounts[0];
-
-
-    /*
-      Read actual current chain.
-    */
-
-    try {
-
-      currentChain =
-        await provider.request({
-          method: "eth_chainId"
-        });
-
-    } catch (error) {
-
-      currentChain =
-        result.chainId;
-
-    }
-
-
-    /*
-      Force Base.
-    */
-
-    if (
-      currentChain !== BASE_CHAIN_ID
-    ) {
-
-      await switchToBase();
-
-    }
-
-
-    updateWalletDisplay();
-
-
-    if (
-      currentChain === BASE_CHAIN_ID
-    ) {
-
-      message.textContent =
-        "Connected to Base.";
-
-    }
-
-  } catch (error) {
-
-    console.error(error);
-
-    message.textContent =
-      "Connection error: " +
-      getErrorMessage(error);
-
-  } finally {
-
-    connectBtn.disabled = false;
-
-  }
-
-}
-
-
-/* =====================================================
-   SWITCH TO BASE
-===================================================== */
-
-async function switchToBase() {
-
-  try {
-
-    switchBtn.disabled = true;
-
-    message.textContent =
-      "Switching MetaMask to Base...";
-
-
-    await evmClient.switchChain({
-
-      chainId:
-        BASE_CHAIN_ID,
-
-      chainConfiguration: {
-
-        chainName:
-          "Base",
-
-        nativeCurrency: {
-
-          name:
-            "Ether",
-
-          symbol:
-            "ETH",
-
-          decimals:
-            18
-
-        },
-
-        rpcUrls: [
-          BASE_RPC
-        ],
-
-        blockExplorerUrls: [
-          "https://basescan.org"
-        ]
-
+      if (!window.ethereum) {
+        throw new Error(
+          "MetaMask was not detected. Open this page in a browser with MetaMask."
+        );
       }
 
-    });
+      provider = window.ethereum;
 
-
-    currentChain =
-      BASE_CHAIN_ID;
-
-
-    updateWalletDisplay();
-
-
-    message.textContent =
-      "MetaMask is now on Base.";
-
-  } catch (error) {
-
-    console.error(error);
-
-    message.textContent =
-      "Could not switch to Base: " +
-      getErrorMessage(error);
-
-  } finally {
-
-    switchBtn.disabled = false;
-
-  }
-
-}
-
-
-/* =====================================================
-   ACCOUNT CHANGED
-===================================================== */
-
-function handleAccountsChanged(accounts) {
-
-  if (
-    !accounts ||
-    accounts.length === 0
-  ) {
-
-    account = null;
-
-    updateWalletDisplay();
-
-    return;
-
-  }
-
-
-  account =
-    accounts[0];
-
-  updateWalletDisplay();
-
-}
-
-
-/* =====================================================
-   CHAIN CHANGED
-===================================================== */
-
-function handleChainChanged(chainId) {
-
-  currentChain =
-    chainId;
-
-  updateWalletDisplay();
-
-}
-
-
-/* =====================================================
-   UPDATE DISPLAY
-===================================================== */
-
-function updateWalletDisplay() {
-
-  if (!account) {
-
-    status.textContent =
-      "Wallet not connected";
-
-    connectBtn.textContent =
-      "Connect MetaMask";
-
-    switchBtn.disabled =
-      true;
-
-    testBtn.disabled =
-      true;
-
-    return;
-
-  }
-
-
-  if (
-    currentChain === BASE_CHAIN_ID
-  ) {
-
-    status.innerHTML =
-      "<strong>Connected to Base</strong><br><br>" +
-      account;
-
-    connectBtn.textContent =
-      "MetaMask Connected";
-
-    switchBtn.disabled =
-      true;
-
-    testBtn.disabled =
-      false;
-
-  } else {
-
-    status.innerHTML =
-      "<strong>Wallet Connected</strong><br><br>" +
-      account +
-      "<br><br>" +
-      "<strong>Current chain:</strong> " +
-      (currentChain || "Unknown") +
-      "<br><br>" +
-      "Base is required.";
-
-    connectBtn.textContent =
-      "MetaMask Connected";
-
-    switchBtn.disabled =
-      false;
-
-    testBtn.disabled =
-      true;
-
-  }
-
-}
-
-
-/* =====================================================
-   BUILD USDC approve(address,0) CALL
-=====================================================
-
-   Function:
-
-   approve(address spender, uint256 amount)
-
-   Selector:
-
-   0x095ea7b3
-
-   spender:
-
-   YOUR CONNECTED WALLET
-
-   amount:
-
-   0
-
-   This does NOT transfer USDC.
-
-===================================================== */
-
-function buildZeroApproveCall() {
-
-  /*
-    Remove 0x from address.
-  */
-
-  const spender =
-    account
-      .toLowerCase()
-      .replace("0x", "");
-
-
-  /*
-    Pad address to 32 bytes.
-  */
-
-  const paddedSpender =
-    spender.padStart(64, "0");
-
-
-  /*
-    uint256(0)
-  */
-
-  const zeroAmount =
-    "0".repeat(64);
-
-
-  /*
-    approve(address,uint256)
-  */
-
-  const calldata =
-    "0x" +
-    "095ea7b3" +
-    paddedSpender +
-    zeroAmount;
-
-
-  return calldata;
-
-}
-
-
-/* =====================================================
-   TEST ERC-8021 BUILDER CODE
-===================================================== */
-
-async function testBuilderCode() {
-
-  if (!provider) {
-
-    message.textContent =
-      "MetaMask is not connected.";
-
-    return;
-
-  }
-
-
-  if (!account) {
-
-    message.textContent =
-      "Connect MetaMask first.";
-
-    return;
-
-  }
-
-
-  if (
-    currentChain !== BASE_CHAIN_ID
-  ) {
-
-    message.textContent =
-      "Switch to Base first.";
-
-    return;
-
-  }
-
-
-  try {
-
-    testBtn.disabled = true;
-
-    message.textContent =
-      "Preparing Base contract transaction...";
-
-
-    /*
-      Build a real USDC contract call.
-
-      approve(your wallet, 0)
-
-      No USDC is transferred.
-    */
-
-    const callData =
-      buildZeroApproveCall();
-
-
-    console.log(
-      "USDC contract:",
-      USDC
-    );
-
-    console.log(
-      "Call data:",
-      callData
-    );
-
-    console.log(
-      "Builder Code:",
-      BUILDER_CODE
-    );
-
-    console.log(
-      "Builder suffix:",
-      BUILDER_SUFFIX
-    );
-
-
-    message.textContent =
-      "Opening MetaMask for confirmation...";
-
-
-    /*
-      EIP-5792 wallet_sendCalls
-
-      MetaMask currently reports that this
-      provider requires version 2.0.0.
-    */
-
-    const response =
-      await provider.request({
-
-        method:
-          "wallet_sendCalls",
-
-        params: [{
-
-          version:
-            "2.0.0",
-
-          from:
-            account,
-
-          chainId:
-            BASE_CHAIN_ID,
-
-          atomicRequired:
-            false,
-
-          calls: [{
-
-            /*
-              Base USDC contract
-            */
-
-            to:
-              USDC,
-
-            /*
-              No ETH
-            */
-
-            value:
-              "0x0",
-
-            /*
-              approve(wallet,0)
-            */
-
-            data:
-              callData
-
-          }],
-
-          /*
-            ERC-8021 Builder Code
-          */
-
-          capabilities: {
-
-            dataSuffix: {
-
-              value:
-                BUILDER_SUFFIX,
-
-              optional:
-                true
-
-            }
-
-          }
-
-        }]
-
-      });
-
-
-    console.log(
-      "wallet_sendCalls response:",
-      response
-    );
-
-
-    const bundleId =
-      typeof response === "string"
-        ? response
-        : (
-            response?.id ||
-            response?.bundleId ||
-            response?.callId
-          );
-
-
-    if (bundleId) {
-
-      message.innerHTML =
-        "Transaction submitted.<br><br>" +
-        "<strong>Builder Code:</strong><br>" +
-        BUILDER_CODE +
-        "<br><br>" +
-        "<strong>Call ID:</strong><br>" +
-        bundleId;
-
-    } else {
-
-      message.innerHTML =
-        "Transaction submitted.<br><br>" +
-        "<strong>Builder Code:</strong><br>" +
-        BUILDER_CODE;
-
-    }
-
-  } catch (error) {
-
-    console.error(error);
-
-    message.textContent =
-      "Transaction error: " +
-      getErrorMessage(error);
-
-  } finally {
-
-    testBtn.disabled = false;
-
-  }
-
-}
-
-
-/* =====================================================
-   BUTTONS
-===================================================== */
-
-connectBtn.addEventListener(
-  "click",
-  connectWallet
-);
-
-switchBtn.addEventListener(
-  "click",
-  switchToBase
-);
-
-testBtn.addEventListener(
-  "click",
-  testBuilderCode
-);
-
-
-/* =====================================================
-   START WALLET
-===================================================== */
-
-initializeWallet();
-
-
-/* =====================================================
-   PONG GAME
-===================================================== */
-
-const canvas =
-  document.getElementById("game");
-
-const ctx =
-  canvas.getContext("2d");
-
-let ballX = 250;
-let ballY = 150;
-
-let ballDX = 3;
-let ballDY = 3;
-
-let paddleY = 125;
-
-
-/* =====================================================
-   GAME LOOP
-===================================================== */
-
-function gameLoop() {
-
-  ctx.fillStyle =
-    "black";
-
-  ctx.fillRect(
-    0,
-    0,
-    canvas.width,
-    canvas.height
-  );
-
-
-  ctx.fillStyle =
-    "#2563eb";
-
-  ctx.fillRect(
-    10,
-    paddleY,
-    10,
-    50
-  );
-
-
-  ctx.beginPath();
-
-  ctx.arc(
-    ballX,
-    ballY,
-    7,
-    0,
-    Math.PI * 2
-  );
-
-  ctx.fill();
-
-
-  ballX += ballDX;
-  ballY += ballDY;
-
-
-  if (
-    ballY <= 7 ||
-    ballY >= canvas.height - 7
-  ) {
-
-    ballDY *= -1;
-
-  }
-
-
-  if (
-    ballX <= 20 &&
-    ballY >= paddleY &&
-    ballY <= paddleY + 50
-  ) {
-
-    ballDX *= -1;
-
-  }
-
-
-  if (
-    ballX >= canvas.width - 7
-  ) {
-
-    ballX = 250;
-    ballY = 150;
-
-  }
-
-
-  requestAnimationFrame(
-    gameLoop
-  );
-
-}
-
-
-/* =====================================================
-   MOUSE CONTROL
-===================================================== */
-
-document.addEventListener(
-  "mousemove",
-  event => {
-
-    const rect =
-      canvas.getBoundingClientRect();
-
-    paddleY =
-      event.clientY -
-      rect.top -
-      25;
-
-    paddleY =
-      Math.max(
-        0,
-        Math.min(
-          canvas.height - 50,
-          paddleY
-        )
+      setStatus(
+        "Requesting MetaMask connection..."
       );
 
+      const accounts =
+        await provider.request({
+          method: "eth_requestAccounts"
+        });
+
+      if (!accounts || accounts.length === 0) {
+        throw new Error(
+          "No wallet account was returned."
+        );
+      }
+
+      walletAddress = accounts[0];
+
+      /*
+        Force Base Mainnet.
+      */
+
+      try {
+
+        await provider.request({
+          method: "wallet_switchEthereumChain",
+          params: [
+            {
+              chainId: BASE_CHAIN_ID
+            }
+          ]
+        });
+
+      } catch (switchError) {
+
+        /*
+          Base Mainnet may not yet exist in a wallet.
+          Add it if necessary.
+        */
+
+        if (
+          switchError.code === 4902 ||
+          switchError.code === -32603
+        ) {
+
+          await provider.request({
+            method: "wallet_addEthereumChain",
+            params: [
+              {
+                chainId: BASE_CHAIN_ID,
+                chainName: "Base",
+                nativeCurrency: {
+                  name: "Ether",
+                  symbol: "ETH",
+                  decimals: 18
+                },
+                rpcUrls: [
+                  "https://mainnet.base.org"
+                ],
+                blockExplorerUrls: [
+                  "https://basescan.org"
+                ]
+              }
+            ]
+          });
+
+        } else {
+          throw switchError;
+        }
+      }
+
+      const currentChain =
+        await provider.request({
+          method: "eth_chainId"
+        });
+
+      if (
+        currentChain.toLowerCase() !==
+        BASE_CHAIN_ID.toLowerCase()
+      ) {
+        throw new Error(
+          "MetaMask is not on Base Mainnet."
+        );
+      }
+
+      walletBox.innerHTML =
+        "<strong>Wallet:</strong> " +
+        shortAddress(walletAddress) +
+        "<br><br>" +
+        "<strong>Network:</strong> Base Mainnet (8453)";
+
+      prepareButton.disabled = false;
+
+      connectButton.textContent =
+        "Wallet Connected";
+
+      setStatus(
+        "Connected to Base Mainnet.",
+        true
+      );
+
+    } catch (error) {
+
+      console.error(error);
+
+      setStatus(
+        "Connection error:<br>" +
+        escapeHtml(error.message || String(error)),
+        false,
+        true
+      );
+    }
   }
 );
 
 
-/* =====================================================
-   START GAME
-===================================================== */
+/*
+  ------------------------------------------------------------
+  Prepare transaction
+  ------------------------------------------------------------
+*/
 
-gameLoop();
+prepareButton.addEventListener(
+  "click",
+  async () => {
+
+    try {
+
+      if (!walletAddress) {
+        throw new Error(
+          "Connect MetaMask first."
+        );
+      }
+
+      const builderCode =
+        builderCodeInput.value.trim();
+
+      /*
+        Build ERC-8021 suffix.
+      */
+
+      const suffix =
+        buildERC8021Suffix(builderCode);
+
+      /*
+        This is intentionally an empty transaction
+        payload BEFORE the ERC-8021 suffix.
+
+        The transaction will therefore contain:
+
+        0x
+        + builder code
+        + length
+        + schema ID
+        + ERC-8021 marker
+      */
+
+      const transactionData =
+        suffix;
+
+      /*
+        Verify the marker is actually the final 16 bytes.
+      */
+
+      if (!verifyERC8021(transactionData)) {
+        throw new Error(
+          "ERC-8021 verification failed."
+        );
+      }
+
+      preparedData = transactionData;
+
+      const suffixHex =
+        getSuffix(transactionData);
+
+      const expected =
+        ERC8021_MARKER;
+
+      details.style.display = "block";
+
+      details.innerHTML = `
+        <strong>Builder Code:</strong><br>
+        <code>${escapeHtml(builderCode)}</code>
+
+        <br><br>
+
+        <strong>Schema:</strong><br>
+        <code>0x00</code>
+
+        <br><br>
+
+        <strong>ERC-8021 Marker:</strong><br>
+        <code>${expected}</code>
+
+        <br><br>
+
+        <strong>Final 16 Bytes:</strong><br>
+        <code>${suffixHex}</code>
+
+        <br><br>
+
+        <strong>Marker Check:</strong>
+        <span class="good">VALID</span>
+
+        <br><br>
+
+        <strong>Complete Transaction Data:</strong><br>
+        <code>${transactionData}</code>
+      `;
+
+      sendButton.disabled = false;
+
+      setStatus(
+        "ERC-8021 calldata prepared successfully. The final 16 bytes are the required 8021 marker.",
+        true
+      );
+
+    } catch (error) {
+
+      console.error(error);
+
+      setStatus(
+        "Preparation error:<br>" +
+        escapeHtml(error.message || String(error)),
+        false,
+        true
+      );
+
+      sendButton.disabled = true;
+    }
+  }
+);
+
+
+/*
+  ------------------------------------------------------------
+  Send transaction
+  ------------------------------------------------------------
+*/
+
+sendButton.addEventListener(
+  "click",
+  async () => {
+
+    try {
+
+      if (!preparedData) {
+        throw new Error(
+          "Prepare the transaction first."
+        );
+      }
+
+      /*
+        Re-check Base before sending.
+      */
+
+      const chainId =
+        await provider.request({
+          method: "eth_chainId"
+        });
+
+      if (
+        chainId.toLowerCase() !==
+        BASE_CHAIN_ID.toLowerCase()
+      ) {
+        throw new Error(
+          "MetaMask changed networks. Please return to Base Mainnet."
+        );
+      }
+
+      /*
+        Verify one more time immediately before signing.
+      */
+
+      if (!verifyERC8021(preparedData)) {
+        throw new Error(
+          "Transaction data failed the ERC-8021 marker check."
+        );
+      }
+
+      /*
+        0 ETH self-transaction.
+
+        This is intentionally used only as an attribution test.
+
+        The wallet pays normal Base transaction gas,
+        but no ETH is transferred to another address.
+      */
+
+      const tx = {
+        from: walletAddress,
+        to: walletAddress,
+        value: "0x0",
+        data: preparedData
+      };
+
+      setStatus(
+        "Opening MetaMask. Review the transaction and confirm it only if you want to send the test transaction..."
+      );
+
+      const txHash =
+        await provider.request({
+          method: "eth_sendTransaction",
+          params: [tx]
+        });
+
+      details.innerHTML += `
+        <br><br>
+
+        <strong>Transaction Hash:</strong><br>
+        <code>${escapeHtml(txHash)}</code>
+
+        <br><br>
+
+        <a
+          href="https://basescan.org/tx/${encodeURIComponent(txHash)}"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Open transaction on BaseScan
+        </a>
+      `;
+
+      setStatus(
+        "Transaction submitted successfully.<br><br>" +
+        "The ERC-8021 marker was present in the calldata before MetaMask signed it.",
+        true
+      );
+
+      sendButton.disabled = true;
+
+    } catch (error) {
+
+      console.error(error);
+
+      setStatus(
+        "Transaction error:<br>" +
+        escapeHtml(error.message || String(error)),
+        false,
+        true
+      );
+    }
+  }
+);
+
+
+/*
+  ------------------------------------------------------------
+  MetaMask account/network changes
+  ------------------------------------------------------------
+*/
+
+function setupMetaMaskListeners() {
+
+  if (!window.ethereum) {
+    return;
+  }
+
+  window.ethereum.on(
+    "accountsChanged",
+    (accounts) => {
+
+      if (!accounts || accounts.length === 0) {
+
+        walletAddress = null;
+
+        prepareButton.disabled = true;
+        sendButton.disabled = true;
+
+        walletBox.innerHTML =
+          "Wallet: Disconnected";
+
+        setStatus(
+          "Wallet disconnected."
+        );
+
+        return;
+      }
+
+      walletAddress = accounts[0];
+
+      walletBox.innerHTML =
+        "<strong>Wallet:</strong> " +
+        shortAddress(walletAddress);
+
+      preparedData = null;
+      sendButton.disabled = true;
+    }
+  );
+
+
+  window.ethereum.on(
+    "chainChanged",
+    (chainId) => {
+
+      if (
+        chainId.toLowerCase() !==
+        BASE_CHAIN_ID.toLowerCase()
+      ) {
+
+        sendButton.disabled = true;
+
+        setStatus(
+          "Wrong network. Switch MetaMask back to Base Mainnet.",
+          false,
+          true
+        );
+
+      } else {
+
+        setStatus(
+          "Base Mainnet connected.",
+          true
+        );
+
+        if (walletAddress) {
+          prepareButton.disabled = false;
+        }
+      }
+    }
+  );
+}
+
+
+setupMetaMaskListeners();
+
+
+/*
+  ------------------------------------------------------------
+  HTML escaping
+  ------------------------------------------------------------
+*/
+
+function escapeHtml(value) {
+
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
 </script>
 
