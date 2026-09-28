@@ -1,9 +1,7 @@
 <!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="base:app_id" content="698d6ec5b3590846b38398f8" />
-  <title>Rocky's Base Project</title>  <style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />  <meta name="base:app_id" content="698d6ec5b3590846b38398f8" />  <title>Rocky's Base Project</title>  <style>
     body {
       margin: 0;
       background: black;
@@ -57,17 +55,31 @@
       opacity: 0.85;
     }
 
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #openMetaMaskButton {
+      display: none;
+    }
+
+    #testButton {
+      display: none;
+    }
+
     #walletAddress {
       color: white;
       font-size: 13px;
       margin-top: 8px;
+      max-width: 90vw;
       word-break: break-all;
     }
 
     #status {
       color: #00ff88;
       font-size: 13px;
-      margin-top: 6px;
+      margin-top: 8px;
       max-width: 90vw;
       text-align: center;
     }
@@ -75,7 +87,7 @@
     #txLink {
       color: #00aaff;
       font-size: 13px;
-      margin-top: 5px;
+      margin-top: 8px;
       display: block;
     }
 
@@ -87,253 +99,712 @@
       height: auto;
       touch-action: none;
     }
-  </style></head><body>
-  <h1>Rocky's Base Project</h1>  <p>Desktop: W/S keys • Mobile: Drag finger up/down</p>  <!-- Base / Builder Code section -->  <div id="walletSection"><button id="connectButton">
-  Connect Wallet
+  </style></head><body>  <h1>Rocky's Base Project</h1>  <p>Desktop: W/S keys • Mobile: Drag finger up/down</p>  <!-- =========================================================
+       WALLET SECTION
+       ========================================================= -->  <div id="walletSection"><button id="connectButton">
+  Connect MetaMask
 </button>
 
-<button id="testButton" style="display:none;">
-  Send 0 ETH Test Transaction
+<button id="openMetaMaskButton">
+  Open in MetaMask
+</button>
+
+<button id="testButton">
+  Test Builder Code
 </button>
 
 <div id="walletAddress"></div>
-<div id="status"></div>
-<a id="txLink" target="_blank"></a>
 
-  </div><canvas id="gameCanvas" width="800" height="400"></canvas>
+<div id="status">
+  Builder Code: bc_q8bj3kjd
+</div>
 
-  <!-- Viem + OX directly from CDN -->  <script type="module">
+<a
+  id="txLink"
+  target="_blank"
+  rel="noopener noreferrer"
+></a>
+
+  </div><canvas
+id="gameCanvas"
+width="800"
+height="400"
+
+«</canvas>»
+
+  <!-- =========================================================
+       BASE / VIEM
+       ========================================================= -->  <script type="module">
 
     import {
       createWalletClient,
-      custom,
-      parseEther
-    } from "https://esm.sh/viem@2.45.0";
+      custom
+    } from "https://esm.sh/viem@2";
 
-    import { base } from "https://esm.sh/viem@2.45.0/chains";
+    import {
+      base
+    } from "https://esm.sh/viem@2/chains";
 
     import {
       Attribution
-    } from "https://esm.sh/ox@0.9.7/erc8021";
+    } from "https://esm.sh/ox@0.9.0/erc8021";
+
 
     /*
-     * ============================================================
-     * ROCKY'S BASE BUILDER CODE
-     * ============================================================
+     * ==========================================================
+     * ROCKY'S BUILDER CODE
+     * ==========================================================
      */
 
     const BUILDER_CODE = "bc_q8bj3kjd";
 
+
     /*
-     * Base's recommended ERC-8021 data suffix.
-     * This is automatically attached to transactions
-     * sent through this wallet client.
+     * Convert Builder Code into the ERC-8021 data suffix.
      */
 
     const DATA_SUFFIX = Attribution.toDataSuffix({
       codes: [BUILDER_CODE]
     });
 
+
+    /*
+     * Wallet variables
+     */
+
     let walletClient = null;
     let connectedAddress = null;
 
-    const connectButton = document.getElementById("connectButton");
-    const testButton = document.getElementById("testButton");
-    const walletAddress = document.getElementById("walletAddress");
-    const status = document.getElementById("status");
-    const txLink = document.getElementById("txLink");
 
     /*
-     * CONNECT WALLET
+     * Page elements
      */
 
-    connectButton.addEventListener("click", async () => {
+    const connectButton =
+      document.getElementById("connectButton");
 
-      if (!window.ethereum) {
+    const openMetaMaskButton =
+      document.getElementById("openMetaMaskButton");
+
+    const testButton =
+      document.getElementById("testButton");
+
+    const walletAddress =
+      document.getElementById("walletAddress");
+
+    const status =
+      document.getElementById("status");
+
+    const txLink =
+      document.getElementById("txLink");
+
+
+    /*
+     * ==========================================================
+     * DETECT WALLET
+     * ==========================================================
+     */
+
+    function hasEthereumProvider() {
+
+      return (
+        typeof window.ethereum !== "undefined"
+      );
+
+    }
+
+
+    /*
+     * ==========================================================
+     * OPEN THIS WEBSITE INSIDE METAMASK
+     *
+     * This is particularly useful on Android when the site
+     * is opened in Chrome and window.ethereum is unavailable.
+     * ==========================================================
+     */
+
+    function openMetaMask() {
+
+      const currentUrl =
+        window.location.href;
+
+      const metamaskUrl =
+        "https://metamask.app.link/dapp/" +
+        currentUrl.replace(/^https?:\/\//, "");
+
+      window.location.href =
+        metamaskUrl;
+
+    }
+
+
+    /*
+     * ==========================================================
+     * CONNECT WALLET
+     * ==========================================================
+     */
+
+    async function connectWallet() {
+
+      txLink.textContent = "";
+      txLink.removeAttribute("href");
+
+      /*
+       * Android Chrome may not have an injected wallet.
+       */
+
+      if (!hasEthereumProvider()) {
+
         status.textContent =
-          "No Ethereum wallet detected. Open this website in MetaMask or another compatible wallet.";
+          "MetaMask was not detected. Tap 'Open in MetaMask'.";
+
+        openMetaMaskButton.style.display =
+          "inline-block";
+
         return;
+
       }
+
 
       try {
 
-        status.textContent = "Connecting wallet...";
+        status.textContent =
+          "Opening MetaMask...";
 
-        walletClient = createWalletClient({
-          chain: base,
-          transport: custom(window.ethereum),
-          dataSuffix: DATA_SUFFIX
-        });
-
-        const addresses = await walletClient.requestAddresses();
-
-        connectedAddress = addresses[0];
 
         /*
-         * Make sure the wallet is on Base.
+         * Create Viem wallet client using MetaMask's
+         * injected Ethereum provider.
+         *
+         * dataSuffix attaches Rocky's Builder Code
+         * to supported transactions.
          */
 
-        await walletClient.switchChain({
-          id: base.id
-        });
+        walletClient =
+          createWalletClient({
+
+            chain: base,
+
+            transport:
+              custom(window.ethereum),
+
+            dataSuffix:
+              DATA_SUFFIX
+
+          });
+
+
+        /*
+         * Explicitly ask MetaMask for account access.
+         */
+
+        const accounts =
+          await walletClient.requestAddresses();
+
+
+        if (
+          !accounts ||
+          accounts.length === 0
+        ) {
+
+          throw new Error(
+            "No wallet account was returned."
+          );
+
+        }
+
+
+        connectedAddress =
+          accounts[0];
+
+
+        /*
+         * Make sure MetaMask is on Base.
+         */
+
+        try {
+
+          await walletClient.switchChain({
+            id: base.id
+          });
+
+        } catch (switchError) {
+
+          /*
+           * Some wallets handle network switching
+           * differently. Try the raw MetaMask method.
+           */
+
+          await window.ethereum.request({
+
+            method:
+              "wallet_switchEthereumChain",
+
+            params: [
+              {
+                chainId: "0x2105"
+              }
+            ]
+
+          });
+
+        }
+
+
+        /*
+         * Display connected wallet.
+         */
+
+        const shortenedAddress =
+          connectedAddress.slice(0, 6) +
+          "..." +
+          connectedAddress.slice(-4);
+
 
         walletAddress.textContent =
           "Connected: " +
-          connectedAddress;
+          shortenedAddress;
+
 
         status.textContent =
           "Connected to Base • Builder Code: " +
           BUILDER_CODE;
 
-        connectButton.textContent = "Wallet Connected";
 
-        testButton.style.display = "inline-block";
+        connectButton.textContent =
+          "Wallet Connected";
+
+
+        openMetaMaskButton.style.display =
+          "none";
+
+
+        testButton.style.display =
+          "inline-block";
+
 
       } catch (error) {
 
-        console.error(error);
+        console.error(
+          "Wallet connection error:",
+          error
+        );
+
+
+        let message =
+          error?.shortMessage ||
+          error?.message ||
+          "Unknown wallet error.";
+
+
+        if (
+          error?.code === 4001
+        ) {
+
+          message =
+            "Connection was cancelled in MetaMask.";
+
+        }
+
 
         status.textContent =
-          "Connection cancelled or failed: " +
-          (error.shortMessage || error.message);
+          "Error: " + message;
 
       }
-
-    });
-
-    /*
-     * TEST TRANSACTION
-     *
-     * Sends 0 ETH to the connected wallet itself.
-     *
-     * This creates a real Base transaction and attaches
-     * Rocky's Builder Code through DATA_SUFFIX.
-     *
-     * The transaction still requires Base gas.
-     */
-
-    testButton.addEventListener("click", async () => {
-
-      if (!walletClient || !connectedAddress) {
-        status.textContent = "Connect your wallet first.";
-        return;
-      }
-
-      try {
-
-        testButton.disabled = true;
-
-        status.textContent =
-          "Confirm the transaction in your wallet...";
-
-        txLink.textContent = "";
-        txLink.removeAttribute("href");
-
-        const hash = await walletClient.sendTransaction({
-
-          account: connectedAddress,
-
-          to: connectedAddress,
-
-          value: 0n
-
-        });
-
-        status.textContent =
-          "Transaction submitted successfully!";
-
-        txLink.textContent =
-          "View transaction on BaseScan";
-
-        txLink.href =
-          "https://basescan.org/tx/" + hash;
-
-        console.log("Transaction:", hash);
-        console.log("Builder Code:", BUILDER_CODE);
-        console.log("Data Suffix:", DATA_SUFFIX);
-
-      } catch (error) {
-
-        console.error(error);
-
-        status.textContent =
-          "Transaction failed or cancelled: " +
-          (error.shortMessage || error.message);
-
-      } finally {
-
-        testButton.disabled = false;
-
-      }
-
-    });
-
-  </script>  <!-- ==========================================================
-       PONG GAME
-       ========================================================== -->  <script>
-
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-
-    const paddleWidth = 10;
-    const paddleHeight = 80;
-
-    let playerY = canvas.height / 2 - paddleHeight / 2;
-    let aiY = canvas.height / 2 - paddleHeight / 2;
-
-    let ballX = canvas.width / 2;
-    let ballY = canvas.height / 2;
-
-    let ballSpeedX = 5;
-    let ballSpeedY = 4;
-
-    const keys = {};
-
-    // Keyboard controls
-
-    document.addEventListener("keydown", (e) => {
-      keys[e.key.toLowerCase()] = true;
-    });
-
-    document.addEventListener("keyup", (e) => {
-      keys[e.key.toLowerCase()] = false;
-    });
-
-    // Mobile touch controls
-
-    canvas.addEventListener("touchmove", (e) => {
-
-      e.preventDefault();
-
-      const rect = canvas.getBoundingClientRect();
-
-      const touchY =
-        e.touches[0].clientY - rect.top;
-
-      playerY =
-        touchY - paddleHeight / 2;
-
-      if (playerY < 0)
-        playerY = 0;
-
-      if (playerY > canvas.height - paddleHeight)
-        playerY = canvas.height - paddleHeight;
-
-    }, { passive: false });
-
-
-    function drawRect(x, y, w, h, color) {
-
-      ctx.fillStyle = color;
-
-      ctx.fillRect(x, y, w, h);
 
     }
 
 
-    function drawBall(x, y, r, color) {
+    /*
+     * ==========================================================
+     * CONNECT BUTTON
+     * ==========================================================
+     */
 
-      ctx.fillStyle = color;
+    connectButton.addEventListener(
+      "click",
+      connectWallet
+    );
+
+
+    /*
+     * ==========================================================
+     * OPEN METAMASK BUTTON
+     * ==========================================================
+     */
+
+    openMetaMaskButton.addEventListener(
+      "click",
+      openMetaMask
+    );
+
+
+    /*
+     * ==========================================================
+     * TEST BUILDER CODE
+     *
+     * Sends a zero-value transaction to the same wallet.
+     *
+     * IMPORTANT:
+     * This is a REAL Base transaction and requires gas.
+     *
+     * The purpose is ONLY to verify that the transaction
+     * pipeline is working.
+     * ==========================================================
+     */
+
+    testButton.addEventListener(
+      "click",
+      async () => {
+
+        if (
+          !walletClient ||
+          !connectedAddress
+        ) {
+
+          status.textContent =
+            "Connect your wallet first.";
+
+          return;
+
+        }
+
+
+        try {
+
+          testButton.disabled =
+            true;
+
+
+          status.textContent =
+            "Confirm the Base transaction in MetaMask...";
+
+
+          txLink.textContent = "";
+
+
+          /*
+           * Builder Code is automatically added by
+           * the Wallet Client's dataSuffix.
+           */
+
+          const hash =
+            await walletClient.sendTransaction({
+
+              account:
+                connectedAddress,
+
+              to:
+                connectedAddress,
+
+              value:
+                0n
+
+            });
+
+
+          status.textContent =
+            "Transaction submitted successfully.";
+
+
+          txLink.textContent =
+            "View transaction on BaseScan";
+
+
+          txLink.href =
+            "https://basescan.org/tx/" +
+            hash;
+
+
+          console.log(
+            "Builder Code:",
+            BUILDER_CODE
+          );
+
+
+          console.log(
+            "ERC-8021 Data Suffix:",
+            DATA_SUFFIX
+          );
+
+
+          console.log(
+            "Transaction Hash:",
+            hash
+          );
+
+
+        } catch (error) {
+
+          console.error(
+            "Transaction error:",
+            error
+          );
+
+
+          let message =
+            error?.shortMessage ||
+            error?.message ||
+            "Transaction failed.";
+
+
+          if (
+            error?.code === 4001
+          ) {
+
+            message =
+              "Transaction cancelled in MetaMask.";
+
+          }
+
+
+          status.textContent =
+            message;
+
+
+        } finally {
+
+          testButton.disabled =
+            false;
+
+        }
+
+      }
+    );
+
+
+    /*
+     * ==========================================================
+     * AUTOMATIC WALLET EVENT HANDLING
+     * ==========================================================
+     */
+
+    if (hasEthereumProvider()) {
+
+      window.ethereum.on(
+        "accountsChanged",
+        (accounts) => {
+
+          if (
+            !accounts ||
+            accounts.length === 0
+          ) {
+
+            connectedAddress = null;
+
+            walletAddress.textContent =
+              "";
+
+            status.textContent =
+              "Wallet disconnected.";
+
+            testButton.style.display =
+              "none";
+
+            connectButton.textContent =
+              "Connect MetaMask";
+
+          } else {
+
+            connectedAddress =
+              accounts[0];
+
+            walletAddress.textContent =
+              "Connected: " +
+              connectedAddress.slice(0, 6) +
+              "..." +
+              connectedAddress.slice(-4);
+
+          }
+
+        }
+      );
+
+
+      window.ethereum.on(
+        "chainChanged",
+        () => {
+
+          status.textContent =
+            "Network changed. Base is required for this site.";
+
+        }
+      );
+
+    }
+
+
+    /*
+     * ==========================================================
+     * INITIAL ANDROID DETECTION
+     * ==========================================================
+     */
+
+    if (!hasEthereumProvider()) {
+
+      /*
+       * Give Android Chrome users an obvious
+       * way to open the page in MetaMask.
+       */
+
+      openMetaMaskButton.style.display =
+        "inline-block";
+
+      status.textContent =
+        "For Android: open this page in MetaMask to connect your wallet.";
+
+    }
+
+
+  </script>  <!-- =========================================================
+       PONG GAME
+       ========================================================= -->  <script>
+
+    const canvas =
+      document.getElementById("gameCanvas");
+
+    const ctx =
+      canvas.getContext("2d");
+
+
+    const paddleWidth = 10;
+    const paddleHeight = 80;
+
+
+    let playerY =
+      canvas.height / 2 -
+      paddleHeight / 2;
+
+
+    let aiY =
+      canvas.height / 2 -
+      paddleHeight / 2;
+
+
+    let ballX =
+      canvas.width / 2;
+
+
+    let ballY =
+      canvas.height / 2;
+
+
+    let ballSpeedX = 5;
+    let ballSpeedY = 4;
+
+
+    const keys = {};
+
+
+    /*
+     * Keyboard controls
+     */
+
+    document.addEventListener(
+      "keydown",
+      (e) => {
+
+        keys[
+          e.key.toLowerCase()
+        ] = true;
+
+      }
+    );
+
+
+    document.addEventListener(
+      "keyup",
+      (e) => {
+
+        keys[
+          e.key.toLowerCase()
+        ] = false;
+
+      }
+    );
+
+
+    /*
+     * Mobile touch controls
+     */
+
+    canvas.addEventListener(
+      "touchmove",
+      (e) => {
+
+        e.preventDefault();
+
+
+        const rect =
+          canvas.getBoundingClientRect();
+
+
+        const touchY =
+          e.touches[0].clientY -
+          rect.top;
+
+
+        playerY =
+          touchY -
+          paddleHeight / 2;
+
+
+        if (playerY < 0) {
+
+          playerY = 0;
+
+        }
+
+
+        if (
+          playerY >
+          canvas.height -
+          paddleHeight
+        ) {
+
+          playerY =
+            canvas.height -
+            paddleHeight;
+
+        }
+
+      },
+      {
+        passive: false
+      }
+    );
+
+
+    function drawRect(
+      x,
+      y,
+      w,
+      h,
+      color
+    ) {
+
+      ctx.fillStyle =
+        color;
+
+      ctx.fillRect(
+        x,
+        y,
+        w,
+        h
+      );
+
+    }
+
+
+    function drawBall(
+      x,
+      y,
+      r,
+      color
+    ) {
+
+      ctx.fillStyle =
+        color;
 
       ctx.beginPath();
 
@@ -352,43 +823,72 @@
 
     function update() {
 
-      // Desktop movement
+      /*
+       * Player movement
+       */
 
-      if (keys["w"] && playerY > 0) {
+      if (
+        keys["w"] &&
+        playerY > 0
+      ) {
+
         playerY -= 6;
+
       }
+
 
       if (
         keys["s"] &&
-        playerY < canvas.height - paddleHeight
+        playerY <
+          canvas.height -
+          paddleHeight
       ) {
+
         playerY += 6;
+
       }
 
 
-      // AI movement
+      /*
+       * AI movement
+       */
 
       const aiCenter =
-        aiY + paddleHeight / 2;
+        aiY +
+        paddleHeight / 2;
 
-      if (aiCenter < ballY - 20) {
+
+      if (
+        aiCenter <
+        ballY - 20
+      ) {
 
         aiY += 4;
 
-      } else if (aiCenter > ballY + 20) {
+      } else if (
+        aiCenter >
+        ballY + 20
+      ) {
 
         aiY -= 4;
 
       }
 
 
-      // Ball movement
+      /*
+       * Ball movement
+       */
 
-      ballX += ballSpeedX;
-      ballY += ballSpeedY;
+      ballX +=
+        ballSpeedX;
+
+      ballY +=
+        ballSpeedY;
 
 
-      // Top/bottom bounce
+      /*
+       * Top/bottom bounce
+       */
 
       if (
         ballY <= 0 ||
@@ -400,12 +900,16 @@
       }
 
 
-      // Player paddle collision
+      /*
+       * Player paddle collision
+       */
 
       if (
         ballX <= 20 &&
         ballY > playerY &&
-        ballY < playerY + paddleHeight
+        ballY <
+          playerY +
+          paddleHeight
       ) {
 
         ballSpeedX *= 1;
@@ -413,12 +917,17 @@
       }
 
 
-      // AI paddle collision
+      /*
+       * AI paddle collision
+       */
 
       if (
-        ballX >= canvas.width - 20 &&
+        ballX >=
+          canvas.width - 20 &&
         ballY > aiY &&
-        ballY < aiY + paddleHeight
+        ballY <
+          aiY +
+          paddleHeight
       ) {
 
         ballSpeedX *= 1;
@@ -426,7 +935,9 @@
       }
 
 
-      // Reset ball
+      /*
+       * Reset ball
+       */
 
       if (
         ballX < 0 ||
@@ -448,6 +959,10 @@
 
     function draw() {
 
+      /*
+       * Background
+       */
+
       drawRect(
         0,
         0,
@@ -457,7 +972,9 @@
       );
 
 
-      // Middle line
+      /*
+       * Center line
+       */
 
       for (
         let i = 0;
@@ -476,7 +993,9 @@
       }
 
 
-      // Player paddle
+      /*
+       * Player paddle
+       */
 
       drawRect(
         10,
@@ -487,7 +1006,9 @@
       );
 
 
-      // AI paddle
+      /*
+       * AI paddle
+       */
 
       drawRect(
         canvas.width - 20,
@@ -498,7 +1019,9 @@
       );
 
 
-      // Ball
+      /*
+       * Ball
+       */
 
       drawBall(
         ballX,
@@ -516,9 +1039,12 @@
 
       draw();
 
-      requestAnimationFrame(gameLoop);
+      requestAnimationFrame(
+        gameLoop
+      );
 
     }
+
 
     gameLoop();
 
