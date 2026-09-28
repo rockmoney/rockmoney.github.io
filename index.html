@@ -657,40 +657,25 @@ function updateWalletDisplay() {
 /* =====================================================
    TEST BUILDER CODE
 ===================================================== */
-
 async function testBuilderCode() {
 
   if (!provider) {
-
     message.textContent =
       "MetaMask is not connected.";
-
     return;
-
   }
-
 
   if (!account) {
-
     message.textContent =
       "Connect MetaMask first.";
-
     return;
-
   }
 
-
-  if (
-    currentChain !== BASE_CHAIN_ID
-  ) {
-
+  if (currentChain !== BASE_CHAIN_ID) {
     message.textContent =
       "Switch to Base first.";
-
     return;
-
   }
-
 
   try {
 
@@ -699,52 +684,46 @@ async function testBuilderCode() {
     message.textContent =
       "Opening MetaMask transaction confirmation...";
 
-
-    /*
-      EIP-5792 wallet_sendCalls
-
-      Base recommends using the dataSuffix
-      capability for ERC-8021 Builder Codes.
-    */
-
     const response =
       await provider.request({
 
-        method:
-          "wallet_sendCalls",
+        method: "wallet_sendCalls",
 
         params: [{
 
-          version:
-            "1",
+          /*
+           * MetaMask requires version 2.0.0
+           */
+          version: "2.0.0",
 
-          from:
-            account,
+          from: account,
 
-          chainId:
-            BASE_CHAIN_ID,
+          chainId: BASE_CHAIN_ID,
 
-          atomicRequired:
-            false,
+          atomicRequired: false,
 
           calls: [{
 
             /*
-              Smart contract, NOT the user's
-              wallet address.
-            */
-
+             * Base Multicall3
+             */
             to:
               MULTICALL3,
 
             value:
               "0x0",
 
+            /*
+             * getCurrentBlockTimestamp()
+             */
             data:
               CALL_DATA
 
           }],
 
+          /*
+           * ERC-8021 Builder Code
+           */
           capabilities: {
 
             dataSuffix: {
@@ -765,26 +744,43 @@ async function testBuilderCode() {
 
 
     console.log(
-      "Builder Code:",
-      BUILDER_CODE
-    );
-
-    console.log(
-      "ERC-8021 suffix:",
-      BUILDER_SUFFIX
-    );
-
-    console.log(
-      "MetaMask response:",
+      "wallet_sendCalls response:",
       response
     );
 
 
-    message.innerHTML =
-      "Builder Code transaction submitted.<br><br>" +
-      "<strong>Builder Code:</strong><br>" +
-      BUILDER_CODE;
+    /*
+     * MetaMask/EIP-5792 normally returns
+     * a call bundle ID.
+     */
+    const bundleId =
+      typeof response === "string"
+        ? response
+        : (
+            response?.id ||
+            response?.bundleId ||
+            response?.callId
+          );
 
+
+    if (bundleId) {
+
+      message.innerHTML =
+        "Transaction submitted.<br><br>" +
+        "<strong>Builder Code:</strong><br>" +
+        BUILDER_CODE +
+        "<br><br>" +
+        "Call ID:<br>" +
+        bundleId;
+
+    } else {
+
+      message.innerHTML =
+        "Builder Code transaction submitted.<br><br>" +
+        "<strong>Builder Code:</strong><br>" +
+        BUILDER_CODE;
+
+    }
 
   } catch (error) {
 
